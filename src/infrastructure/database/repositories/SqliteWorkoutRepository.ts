@@ -98,7 +98,7 @@ export class SqliteWorkoutRepository implements WorkoutRepository {
       where.push('EXISTS (SELECT 1 FROM workout_exercises x WHERE x.workout_id = w.id AND x.exercise_id = ?)');
       params.push(q.exerciseId);
     }
-    params.push(Math.max(1, Math.min(200, q.limit | 0)));
+    params.push(Math.max(1, Math.min(200, Math.trunc(q.limit))));
     const rows = await this.db.query(
       `SELECT ${WORKOUT_COLS.split(', ').map(c => `w.${c}`).join(', ')},
         (SELECT COUNT(*) FROM workout_exercises we WHERE we.workout_id = w.id) AS exercise_count,

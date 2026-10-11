@@ -24,6 +24,9 @@ function useApp(): AppContextValue {
 
 export const useServices = () => useApp().services;
 
+/** The store itself, for calling actions without subscribing to state. */
+export const useActiveWorkoutStore = () => useApp().activeWorkout;
+
 /** Subscribe to a slice so components re-render only when that slice changes. */
 export function useActiveWorkout<T>(selector: (s: ActiveWorkoutState) => T): T {
   return useStore(useApp().activeWorkout, selector);

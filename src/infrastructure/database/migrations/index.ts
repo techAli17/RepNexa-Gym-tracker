@@ -36,7 +36,7 @@ export async function migrate(
     if (m.version <= current) continue;
     await db.transaction(async tx => {
       for (const sql of m.statements) await tx.run(sql);
-      await tx.run(`PRAGMA user_version = ${m.version | 0}`);
+      await tx.run(`PRAGMA user_version = ${Math.trunc(m.version)}`);
     });
     current = m.version;
   }
