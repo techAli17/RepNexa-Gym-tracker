@@ -1,0 +1,16 @@
+appId: ${APP_ID || "org.reactjs.native.example.RepNexa"}
+name: Without Google set up, the app is honest and export still works
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Saved on this phone only"
+    timeout: 60000
+- tapOn: "Settings, tab.*"
+- tapOn: "Google Drive backup.*"
+- assertVisible: "Google sign-in is not set up in this build.*"
+- assertVisible: "Export"
+- assertVisible: "Import"
+- scrollUntilVisible:
+    element: "Delete data on this phone"
+    direction: DOWN

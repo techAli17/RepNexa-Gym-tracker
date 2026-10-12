@@ -1,0 +1,54 @@
+# Releasing RepNexa
+
+## Before the first store build
+
+1. **Google sign-in**: client IDs and the iOS URL scheme (see [GOOGLE_SETUP.md](GOOGLE_SETUP.md)). Add the release SHA-1s to the Android OAuth client.
+2. **iOS bundle ID**: still the template's `org.reactjs.native.example.RepNexa`. Pick yours (for example `com.repnexa`) in Xcode → target → Signing & Capabilities. Update the iOS OAuth client and `APP_ID` in `.maestro/` to match.
+3. **App icon and launch screen**: still the React Native defaults.
+4. **Privacy policy URL**: required by both stores and by Google's OAuth consent screen. The honest summary: no servers, no analytics, no ads; data stays on the device and, if the user enables it, in a file in their own Google Drive.
+
+## Android
+
+Create an upload key once and keep it out of the repository (`*.keystore` and `*.jks` are gitignored):
+
+```sh
+keytool -genkeypair -v -storetype PKCS12 -keystore ~/keys/repnexa-upload.jks \
+  -alias repnexa-upload -keyalg RSA -keysize 2048 -validity 10000
+```
+
+In `~/.gradle/gradle.properties` (your home directory, not the project):
+
+```properties
+REPNEXA_UPLOAD_STORE_FILE=/Users/you/keys/repnexa-upload.jks
+REPNEXA_UPLOAD_STORE_PASSWORD=…
+REPNEXA_UPLOAD_KEY_ALIAS=repnexa-upload
+REPNEXA_UPLOAD_KEY_PASSWORD=…
+```
+
+Build the bundle for Play:
+
+```sh
+cd android && ./gradlew bundleRelease   # android/app/build/outputs/bundle/release/app-release.aab
+```
+
+Without these properties, release builds are signed with the debug key and Gradle prints a warning. Such builds are fine for testing but Play rejects them.
+
+Bump `versionCode` (an integer that must increase with every upload) and `versionName` in `android/app/build.gradle`, and `APP_VERSION` in `src/application/container.ts`.
+
+`android:allowBackup="false"` is set, so Android's own cloud backup does not copy the database. The user's backup is the Drive file they control.
+
+## iOS
+
+Set the team and bundle ID in Xcode, bump the version and build number, then Product → Archive. `PrivacyInfo.xcprivacy` is maintained by CocoaPods for the native libraries. Declare in App Store Connect that the app collects no data.
+
+On iOS, device backups (iCloud or computer) include app data unless excluded. Removing workouts in RepNexa cannot erase copies inside such backups; the app says so where it deletes data.
+
+## Pre-release checklist
+
+- [ ] `npm test`, `npx tsc --noEmit`, `npm run lint` pass
+- [ ] `maestro test .maestro` passes on an iOS simulator and an Android emulator
+- [ ] Manual Google checks from GOOGLE_SETUP.md, with a real account on a real device
+- [ ] VoiceOver and TalkBack pass through: log a set, finish, restore
+- [ ] Largest text size: the set row stays usable
+- [ ] Airplane mode: logging, history and progress work; backup shows "waiting"
+- [ ] Upgrade test: install the previous build, log workouts, install the new build, data intact

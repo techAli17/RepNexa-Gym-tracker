@@ -52,6 +52,12 @@ export class SqliteRoutineRepository implements RoutineRepository {
     }
   }
 
+  async setPositions(orderedIds: readonly Uuid[], at: Timestamp): Promise<void> {
+    for (let i = 0; i < orderedIds.length; i++) {
+      await this.db.run('UPDATE routines SET position = ?, updated_at = ? WHERE id = ?', [i, at, orderedIds[i]]);
+    }
+  }
+
   async softDelete(id: Uuid, at: Timestamp): Promise<void> {
     await this.db.run(
       'UPDATE routines SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL',

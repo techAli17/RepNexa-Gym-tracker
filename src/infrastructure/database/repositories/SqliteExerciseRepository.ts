@@ -45,6 +45,14 @@ export class SqliteExerciseRepository implements ExerciseRepository {
     );
   }
 
+  async updateCustom(e: Exercise): Promise<void> {
+    await this.db.run(
+      `UPDATE exercises SET name = ?, muscle_group = ?, equipment = ?, tracking_type = ?, instructions = ?, updated_at = ?
+       WHERE id = ? AND is_custom = 1`,
+      [e.name, e.muscleGroup, e.equipment, e.trackingType, e.instructions, e.updatedAt, e.id],
+    );
+  }
+
   async upsertBuiltIns(exercises: readonly Exercise[]): Promise<void> {
     for (const e of exercises) {
       await this.db.run(

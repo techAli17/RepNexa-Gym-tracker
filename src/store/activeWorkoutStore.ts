@@ -19,8 +19,13 @@ export interface ActiveWorkoutState {
   load(): Promise<void>;
   startEmpty(): Promise<void>;
   startTemplate(t: RoutineTemplate): Promise<void>;
+  startRoutine(routineId: Uuid): Promise<void>;
   addExercise(exerciseId: Uuid): Promise<void>;
   removeExercise(workoutExerciseId: Uuid): Promise<void>;
+  replaceExercise(workoutExerciseId: Uuid, exerciseId: Uuid): Promise<void>;
+  setRestSeconds(workoutExerciseId: Uuid, seconds: number | null): Promise<void>;
+  rename(name: string): Promise<void>;
+  setNotes(notes: string): Promise<void>;
   moveExercise(workoutExerciseId: Uuid, dir: -1 | 1): Promise<void>;
   setExerciseNotes(workoutExerciseId: Uuid, notes: string): Promise<void>;
   addSet(workoutExerciseId: Uuid): Promise<void>;
@@ -91,12 +96,33 @@ export function createActiveWorkoutStore(services: AppServices, getSettings: () 
         set({ previous: {} });
         await refresh();
       },
+      async startRoutine(routineId) {
+        await services.workouts.startFromRoutine(routineId, unit());
+        set({ previous: {} });
+        await refresh();
+      },
       async addExercise(exerciseId) {
         await services.workouts.addExercise(requireId(), exerciseId, unit());
         await refresh();
       },
       async removeExercise(id) {
         await services.workouts.removeExercise(id);
+        await refresh();
+      },
+      async replaceExercise(id, exerciseId) {
+        await services.workouts.replaceExercise(id, exerciseId, unit());
+        await refresh();
+      },
+      async setRestSeconds(id, seconds) {
+        await services.workouts.setRestSeconds(id, seconds);
+        await refresh();
+      },
+      async rename(name) {
+        await services.workouts.rename(requireId(), name);
+        await refresh();
+      },
+      async setNotes(notes) {
+        await services.workouts.updateNotes(requireId(), notes);
         await refresh();
       },
       async moveExercise(id, dir) {

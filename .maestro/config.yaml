@@ -1,0 +1,3 @@
+# Run: maestro test .maestro   (app installed on a booted simulator/emulator; Metro running for debug builds)
+flows:
+  - "flows/*"

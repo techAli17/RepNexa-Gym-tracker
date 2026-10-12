@@ -4,16 +4,21 @@ import type { WeightUnit, WorkoutExerciseDetail, WorkoutSet } from '../../domain
 import { useStyles, useTheme } from '../../theme/ThemeProvider';
 import type { Theme } from '../../theme/tokens';
 import { AppText } from '../common/AppText';
+import { Icon } from '../common/Icon';
 import { SET_GRID, SetRow } from './SetRow';
 
 export interface ExerciseBlockActions {
   updateSet: (id: string, patch: Partial<WorkoutSet>) => Promise<void>;
   toggleSet: (id: string) => void;
   cycleSetType: (id: string) => void;
+  openSetOptions: (id: string) => void;
   addSet: (workoutExerciseId: string) => void;
   removeLastSet: (workoutExerciseId: string) => void;
+  removeSet: (setId: string) => void;
   move: (workoutExerciseId: string, dir: -1 | 1) => void;
   remove: (workoutExerciseId: string, name: string) => void;
+  replace?: (workoutExerciseId: string, exerciseId: string) => void;
+  editRest?: (workoutExerciseId: string, current: number | null) => void;
   saveNotes: (workoutExerciseId: string, notes: string) => void;
   openInfo: (exerciseId: string) => void;
 }
@@ -26,20 +31,17 @@ export function setLabels(sets: readonly WorkoutSet[]): string[] {
   return sets.map(s => (s.setType === 'normal' ? String(++n) : LABEL[s.setType]));
 }
 
-const HEAD: Record<string, [string, string]> = {
-  weight_reps: ['', 'Reps'],
-  bodyweight_reps: ['+', 'Reps'],
-  duration: ['', 'Sec'],
-  distance_duration: ['', 'Min'],
-};
+const restText = (sec: number) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
 
-export const ExerciseBlock = React.memo(function ExerciseBlock({
+export const ExerciseBlock = React.memo(function ExerciseBlockCard({
   item,
   index,
   count,
   previous,
   unit,
   actions,
+  mode = 'live',
+  defaultRest,
 }: {
   item: WorkoutExerciseDetail;
   index: number;
@@ -47,6 +49,8 @@ export const ExerciseBlock = React.memo(function ExerciseBlock({
   previous: WorkoutSet[] | undefined;
   unit: WeightUnit;
   actions: ExerciseBlockActions;
+  mode?: 'live' | 'edit';
+  defaultRest?: number;
 }) {
   const s = useStyles(styles);
   const t = useTheme();
@@ -57,9 +61,18 @@ export const ExerciseBlock = React.memo(function ExerciseBlock({
   const prevWorking = (previous ?? []).filter(p => p.setType !== 'warmup');
   let workingIndex = 0;
 
-  const head = HEAD[tracking];
   const colA =
-    tracking === 'weight_reps' ? unit : tracking === 'bodyweight_reps' ? `+${unit}` : tracking === 'distance_duration' ? (unit === 'lb' ? 'mi' : 'km') : head[0];
+    tracking === 'weight_reps'
+      ? unit
+      : tracking === 'bodyweight_reps'
+        ? `+${unit}`
+        : tracking === 'distance_duration'
+          ? unit === 'lb'
+            ? 'mi'
+            : 'km'
+          : '';
+  const colB = tracking === 'duration' ? 'Sec' : tracking === 'distance_duration' ? 'Min' : 'Reps';
+  const rest = item.restSeconds ?? defaultRest ?? null;
 
   return (
     <View style={s.card}>
@@ -73,6 +86,11 @@ export const ExerciseBlock = React.memo(function ExerciseBlock({
           <AppText variant="heading" style={s.name}>
             {item.exercise.name}
           </AppText>
+          {mode === 'live' && rest != null ? (
+            <AppText variant="caption" color="ink3">
+              Rest {restText(rest)}
+            </AppText>
+          ) : null}
         </Pressable>
         <Pressable
           onPress={() => setMenu(m => !m)}
@@ -82,16 +100,20 @@ export const ExerciseBlock = React.memo(function ExerciseBlock({
           accessibilityState={{ expanded: menu }}
           hitSlop={6}
         >
-          <AppText variant="heading" color="ink2">
-            ⋯
-          </AppText>
+          <Icon name="more" size={20} tint="ink2" />
         </Pressable>
       </View>
       {menu ? (
         <View style={s.menu}>
-          <MenuButton label="Move up" disabled={index === 0} onPress={() => actions.move(item.id, -1)} />
-          <MenuButton label="Move down" disabled={index === count - 1} onPress={() => actions.move(item.id, 1)} />
-          <MenuButton label="Remove" danger onPress={() => actions.remove(item.id, item.exercise.name)} />
+          {actions.replace && mode === 'live' ? (
+            <MenuButton icon="swap" label="Replace" onPress={() => actions.replace!(item.id, item.exerciseId)} />
+          ) : null}
+          {actions.editRest && mode === 'live' ? (
+            <MenuButton icon="timer" label="Rest" onPress={() => actions.editRest!(item.id, item.restSeconds)} />
+          ) : null}
+          <MenuButton icon="arrowUp" label="Up" disabled={index === 0} onPress={() => actions.move(item.id, -1)} />
+          <MenuButton icon="arrowDown" label="Down" disabled={index === count - 1} onPress={() => actions.move(item.id, 1)} />
+          <MenuButton icon="trash" label="Remove" danger onPress={() => actions.remove(item.id, item.exercise.name)} />
         </View>
       ) : null}
       <TextInput
@@ -107,17 +129,17 @@ export const ExerciseBlock = React.memo(function ExerciseBlock({
         maxLength={1000}
       />
       <View style={s.colHead} importantForAccessibility="no-hide-descendants">
-        <AppText variant="caption" color="ink3" style={{ width: SET_GRID.badge, textAlign: 'center' }}>
+        <AppText variant="caption" color="ink3" style={[s.center, { width: SET_GRID.badge }]}>
           Set
         </AppText>
         <AppText variant="caption" color="ink3" style={s.flex}>
-          Previous
+          {mode === 'edit' ? '' : 'Previous'}
         </AppText>
-        <AppText variant="caption" color="ink3" style={{ width: SET_GRID.a, textAlign: 'center' }}>
+        <AppText variant="caption" color="ink3" style={[s.center, { width: SET_GRID.a }]}>
           {colA}
         </AppText>
-        <AppText variant="caption" color="ink3" style={{ width: SET_GRID.b, textAlign: 'center' }}>
-          {head[1]}
+        <AppText variant="caption" color="ink3" style={[s.center, { width: SET_GRID.b }]}>
+          {colB}
         </AppText>
         <View style={{ width: SET_GRID.check }} />
       </View>
@@ -132,29 +154,46 @@ export const ExerciseBlock = React.memo(function ExerciseBlock({
           onUpdate={actions.updateSet}
           onToggle={actions.toggleSet}
           onCycleType={actions.cycleSetType}
+          onOpenOptions={actions.openSetOptions}
+          mode={mode}
+          onRemove={actions.removeSet}
         />
       ))}
       <View style={s.foot}>
         <Pressable style={[s.footBtn, s.footMain]} onPress={() => actions.addSet(item.id)} accessibilityRole="button">
           <AppText variant="label">+ Add set</AppText>
         </Pressable>
-        <Pressable
-          style={[s.footBtn, item.sets.length < 2 && s.dim]}
-          disabled={item.sets.length < 2}
-          onPress={() => actions.removeLastSet(item.id)}
-          accessibilityRole="button"
-          accessibilityState={{ disabled: item.sets.length < 2 }}
-        >
-          <AppText variant="label" color="ink2">
-            Remove set
-          </AppText>
-        </Pressable>
+        {mode === 'live' ? (
+          <Pressable
+            style={[s.footBtn, item.sets.length < 2 && s.dim]}
+            disabled={item.sets.length < 2}
+            onPress={() => actions.removeLastSet(item.id)}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: item.sets.length < 2 }}
+          >
+            <AppText variant="label" color="ink2">
+              Remove set
+            </AppText>
+          </Pressable>
+        ) : null}
       </View>
     </View>
   );
 });
 
-function MenuButton({ label, onPress, disabled, danger }: { label: string; onPress: () => void; disabled?: boolean; danger?: boolean }) {
+function MenuButton({
+  label,
+  icon,
+  onPress,
+  disabled,
+  danger,
+}: {
+  label: string;
+  icon: React.ComponentProps<typeof Icon>['name'];
+  onPress: () => void;
+  disabled?: boolean;
+  danger?: boolean;
+}) {
   const s = useStyles(styles);
   return (
     <Pressable
@@ -162,9 +201,11 @@ function MenuButton({ label, onPress, disabled, danger }: { label: string; onPre
       disabled={disabled}
       onPress={onPress}
       accessibilityRole="button"
+      accessibilityLabel={label === 'Up' ? 'Move up' : label === 'Down' ? 'Move down' : label}
       accessibilityState={{ disabled: !!disabled }}
     >
-      <AppText variant="label" color={danger ? 'danger' : 'ink'}>
+      <Icon name={icon} size={18} tint={danger ? 'danger' : 'ink'} />
+      <AppText variant="caption" color={danger ? 'danger' : 'ink'} style={s.menuText}>
         {label}
       </AppText>
     </Pressable>
@@ -186,18 +227,28 @@ const styles = (t: Theme) =>
     head: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 4 },
     nameBtn: { flex: 1, paddingVertical: 4 },
     name: { color: t.colors.ink },
-    more: { width: 40, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: 10, borderWidth: 1, borderColor: t.colors.line },
+    more: {
+      width: 44,
+      height: 40,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: t.colors.line,
+    },
     menu: { flexDirection: 'row', gap: 6, marginTop: 10, paddingHorizontal: 4 },
     menuBtn: {
       flex: 1,
-      minHeight: 40,
+      minHeight: 52,
       borderRadius: 11,
       borderWidth: 1,
       borderColor: t.colors.line,
       backgroundColor: t.colors.surface2,
       alignItems: 'center',
       justifyContent: 'center',
+      gap: 2,
     },
+    menuText: { fontWeight: '600' },
     note: {
       marginTop: 8,
       marginHorizontal: 4,
@@ -208,6 +259,7 @@ const styles = (t: Theme) =>
       fontSize: 15,
     },
     colHead: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingTop: 10, paddingBottom: 4, paddingHorizontal: 2 },
+    center: { textAlign: 'center' },
     flex: { flex: 1 },
     foot: { flexDirection: 'row', gap: 8, marginTop: 8 },
     footBtn: {

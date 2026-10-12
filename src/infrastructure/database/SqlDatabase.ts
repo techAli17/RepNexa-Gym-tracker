@@ -14,6 +14,8 @@ export interface SqlDatabase extends SqlExecutor {
    */
   transaction<T>(fn: (tx: SqlExecutor) => Promise<T>): Promise<T>;
   close(): void;
+  /** Closes the connection and deletes the database file. */
+  destroy(): void;
 }
 
 /**
@@ -31,6 +33,7 @@ interface NitroExecutor {
 export interface NitroLikeConnection extends NitroExecutor {
   transaction<T>(fn: (tx: NitroExecutor) => Promise<T>): Promise<T>;
   close(): void;
+  delete(): void;
 }
 
 function wrapExecutor(ex: NitroExecutor): SqlExecutor {
@@ -51,6 +54,7 @@ export function createSqlDatabase(conn: NitroLikeConnection): SqlDatabase {
     ...wrapExecutor(conn),
     transaction: fn => conn.transaction(tx => fn(wrapExecutor(tx))),
     close: () => conn.close(),
+    destroy: () => conn.delete(),
   };
 }
 

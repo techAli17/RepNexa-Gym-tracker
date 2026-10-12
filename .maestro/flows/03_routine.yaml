@@ -1,0 +1,25 @@
+appId: ${APP_ID || "org.reactjs.native.example.RepNexa"}
+name: Add a template as a routine and start it from Home
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Add routines"
+    timeout: 60000
+- tapOn: "Add routines"
+- assertVisible: "Templates"
+- tapOn:
+    text: "Add"
+    index: 0                       # Push
+- assertVisible: "Push added to your routines"
+- tapOn: "Back"   # iOS header back button (Maestro `back` is Android-only)
+- assertVisible: "Next up: Push.*"
+- tapOn: "Next up: Push.*"
+- assertVisible: "Bench Press.*"
+- assertVisible: "Overhead Press.*"
+- scrollUntilVisible:
+    element: "Discard workout"
+    direction: DOWN
+- tapOn: "Discard workout"
+- tapOn: "Discard"            # the confirmation alert button
+- assertVisible: "Next up: Push.*"

@@ -4,6 +4,7 @@ import type { WorkoutSet } from '../../../domain/models';
 import { ThemeProvider } from '../../../theme/ThemeProvider';
 import { setLabels } from '../ExerciseBlock';
 import { SetRow, type SetRowProps } from '../SetRow';
+import { flushPendingNumberFields } from '../NumberField';
 
 const baseSet: WorkoutSet = {
   id: 'set-1',
@@ -32,6 +33,7 @@ async function renderRow(over: Partial<SetRowProps> = {}) {
     onUpdate: jest.fn().mockResolvedValue(undefined),
     onToggle: jest.fn(),
     onCycleType: jest.fn(),
+    onOpenOptions: jest.fn(),
     ...over,
   };
   await render(
@@ -65,6 +67,19 @@ describe('SetRow', () => {
     expect(props.onUpdate).not.toHaveBeenCalledWith('set-1', { weightValue: 225, weightUnit: 'lb' });
     await act(() => jest.advanceTimersByTime(600));
     expect(props.onUpdate).toHaveBeenLastCalledWith('set-1', { weightValue: 225, weightUnit: 'lb' });
+  });
+
+  it('saves a just-typed value immediately when flushed (check-off right after typing)', async () => {
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    const props = await renderRow({ set: { ...baseSet, reps: null } });
+    const reps = screen.getByLabelText('Set 1, reps');
+    await user.type(reps, '8', { skipBlur: true });
+    expect(props.onUpdate).not.toHaveBeenCalledWith('set-1', { reps: 8 });
+    await act(() => flushPendingNumberFields());
+    expect(props.onUpdate).toHaveBeenCalledWith('set-1', { reps: 8 });
+    // The pending timer must not save the same value a second time.
+    await act(() => jest.advanceTimersByTime(600));
+    expect((props.onUpdate as jest.Mock).mock.calls.filter(c => c[1].reps === 8)).toHaveLength(1);
   });
 
   it('flags an invalid number and does not save it', async () => {

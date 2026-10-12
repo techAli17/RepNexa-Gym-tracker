@@ -1,0 +1,24 @@
+appId: ${APP_ID || "org.reactjs.native.example.RepNexa"}
+name: A killed app reopens the workout with every logged set
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: ".*Start empty workout"
+    timeout: 60000
+- tapOn: ".*Start empty workout"
+- tapOn: ".*Add exercise"
+- tapOn: "Back Squat.*"
+- tapOn: "Set 1, weight in kg"
+- inputText: "140"
+- tapOn: "Set 1, reps"
+- inputText: "3"
+- tapOn: "Set 1 done"
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "Resume Workout"
+    timeout: 60000
+- tapOn: "Resume Workout"
+- assertVisible: "Back Squat.*"
+- assertVisible: "420"            # 140 × 3 survived the kill

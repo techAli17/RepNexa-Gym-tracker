@@ -1,0 +1,34 @@
+appId: ${APP_ID || "org.reactjs.native.example.RepNexa"}
+name: Log and finish a workout, then see it in history
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: ".*Start empty workout"
+    timeout: 60000
+- tapOn: ".*Start empty workout"
+- assertVisible: "Add your first exercise"
+- tapOn: ".*Add exercise"
+- tapOn: "Search exercises"
+- inputText: "bench"
+- tapOn: "Bench Press.*"
+- assertVisible: "Bench Press.*"
+- tapOn: "Set 1, weight in kg"
+- inputText: "100"
+- tapOn: "Set 1, reps"
+- inputText: "5"
+- tapOn: "Set 1 done"
+- assertVisible: "Rest timer.*"
+- tapOn: "Skip rest"
+- assertVisible: "500"            # volume strip: 100 kg × 5
+- tapOn: "Finish"
+- assertVisible: "Finish workout?"  # two unchecked sets remain
+- tapOn:
+    text: "Finish"
+    index: 1
+- assertVisible: "Workout complete"
+- assertVisible: "No new records this time.*"
+- tapOn: "Done"
+- tapOn: "History, tab.*"
+- assertVisible: "Workout.*"
+- assertVisible: ".*500 kg.*1 sets.*"

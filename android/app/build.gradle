@@ -83,7 +83,7 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
-        versionName "1.0"
+        versionName "0.1.0"
     }
     signingConfigs {
         debug {
@@ -92,15 +92,29 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        // Upload key for Play. The four properties live outside the repo, e.g. in
+        // ~/.gradle/gradle.properties; never commit the keystore or passwords.
+        if (project.hasProperty('REPNEXA_UPLOAD_STORE_FILE')) {
+            release {
+                storeFile file(REPNEXA_UPLOAD_STORE_FILE)
+                storePassword REPNEXA_UPLOAD_STORE_PASSWORD
+                keyAlias REPNEXA_UPLOAD_KEY_ALIAS
+                keyPassword REPNEXA_UPLOAD_KEY_PASSWORD
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            if (signingConfigs.findByName('release') != null) {
+                signingConfig signingConfigs.release
+            } else {
+                // Lets local release builds run; such an APK cannot be uploaded to Play.
+                logger.warn('RepNexa: no upload key configured, signing release with the debug key. See docs/RELEASE.md.')
+                signingConfig signingConfigs.debug
+            }
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }

@@ -17,6 +17,11 @@ end
 target 'RepNexa' do
   config = use_native_modules!
 
+  # Google Sign-In's Swift dependency (AppCheckCore) imports these; as static
+  # libraries they need module maps. Scoped to them instead of use_modular_headers!.
+  pod 'GoogleUtilities', :modular_headers => true
+  pod 'RecaptchaInterop', :modular_headers => true
+
   use_react_native!(
     :path => config[:reactNativePath],
     # An absolute path to your application root.
@@ -30,5 +35,16 @@ target 'RepNexa' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    # Some pods (Google Sign-In's dependencies, react-native-svg's filters) still
+    # declare iOS 9-12 targets, which current Xcode rejects. Lift them to the
+    # app's own minimum; they run there anyway.
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |c|
+        if c.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_f < min_ios_version_supported.to_f
+          c.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = min_ios_version_supported
+        end
+      end
+    end
   end
 end

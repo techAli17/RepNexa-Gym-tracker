@@ -1,0 +1,28 @@
+appId: ${APP_ID || "org.reactjs.native.example.RepNexa"}
+name: Create a custom exercise and find it in the library
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Exercises, tab.*"
+    timeout: 60000
+- tapOn: "Exercises, tab.*"
+- tapOn: "Create exercise"
+- tapOn: "Exercise name"
+- inputText: "Zercher Squat"
+- pressKey: Enter          # single-line field: return dismisses the keyboard
+- tapOn:
+    text: "Legs"
+    below: "Muscle group"     # the library behind the modal has its own Legs chip
+- scrollUntilVisible:
+    element: "Create exercise"
+    direction: DOWN
+- tapOn:
+    text: "Create exercise"
+    below: "What you log"
+- assertVisible: "Zercher Squat"
+- assertVisible: ".*Custom.*"
+- tapOn: "Back"   # iOS header back button (Maestro `back` is Android-only)
+- tapOn: "Search exercises"
+- inputText: "zercher"
+- assertVisible: "1 exercise"

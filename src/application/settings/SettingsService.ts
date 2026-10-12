@@ -7,9 +7,12 @@ const KEY = 'preferences';
 export class SettingsService {
   constructor(private readonly d: { repos: Repositories; clock: Clock }) {}
 
-  /** Unknown or missing keys fall back to defaults, so older stored settings keep working. */
-  async load(): Promise<AppSettings> {
-    const stored = (await this.d.repos.settings.get<Partial<AppSettings>>(KEY)) ?? {};
+  /**
+   * Unknown or missing keys fall back to defaults, so older stored settings keep working.
+   * Pass `r` inside a transaction: reading through the outer connection there would deadlock.
+   */
+  async load(r: Repositories = this.d.repos): Promise<AppSettings> {
+    const stored = (await r.settings.get<Partial<AppSettings>>(KEY)) ?? {};
     return { ...DEFAULT_SETTINGS, ...stored };
   }
 

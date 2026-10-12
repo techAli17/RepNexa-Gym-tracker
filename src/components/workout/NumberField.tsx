@@ -7,6 +7,19 @@ import { inputText } from '../../utils/format';
 
 const COMMIT_DELAY_MS = 450;
 
+/** Commits of fields with a typed but not yet saved value, keyed per field. */
+const pending = new Map<symbol, () => Promise<void>>();
+
+/**
+ * Saves every field still inside its commit delay. Call before acting on set
+ * values (checking a set off, finishing), so a value typed a moment ago counts.
+ */
+export async function flushPendingNumberFields(): Promise<void> {
+  const jobs = [...pending.values()];
+  pending.clear();
+  await Promise.all(jobs.map(j => j().catch(() => undefined)));
+}
+
 export interface NumberFieldProps {
   value: number | null;
   onCommit: (v: number | null) => Promise<void>;
@@ -36,6 +49,7 @@ export const NumberField = React.memo(function NumberField({
   const focused = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastCommitted = useRef<number | null>(value);
+  const key = useRef(Symbol('field')).current;
 
   // Follow outside changes (e.g. unit switch, prefill) unless the user is typing.
   useEffect(() => {
@@ -45,22 +59,27 @@ export const NumberField = React.memo(function NumberField({
     }
   }, [value]);
 
-  useEffect(() => () => {
-    if (timer.current) clearTimeout(timer.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+      pending.delete(key);
+    },
+    [key],
+  );
 
-  const commit = (raw: string) => {
+  const commit = (raw: string): Promise<void> => {
     if (timer.current) clearTimeout(timer.current);
     timer.current = null;
+    pending.delete(key);
     const v = parseNumericInput(raw);
     if (v === undefined || (integer && v != null && !Number.isInteger(v))) {
       setBad(true);
-      return;
+      return Promise.resolve();
     }
-    if (v === lastCommitted.current) return;
+    if (v === lastCommitted.current) return Promise.resolve();
     const previous = lastCommitted.current;
     lastCommitted.current = v;
-    onCommit(v).then(
+    return onCommit(v).then(
       () => setBad(false),
       () => {
         lastCommitted.current = previous; // not saved: allow the same value to be retried
@@ -77,14 +96,15 @@ export const NumberField = React.memo(function NumberField({
         const v = parseNumericInput(x);
         setBad(v === undefined || (!!integer && v != null && !Number.isInteger(v)));
         if (timer.current) clearTimeout(timer.current);
-        timer.current = setTimeout(() => commit(x), COMMIT_DELAY_MS);
+        timer.current = setTimeout(() => void commit(x), COMMIT_DELAY_MS);
+        pending.set(key, () => commit(x));
       }}
       onFocus={() => {
         focused.current = true;
       }}
       onBlur={() => {
         focused.current = false;
-        commit(text);
+        void commit(text);
       }}
       keyboardType={integer ? 'number-pad' : 'decimal-pad'}
       inputMode={integer ? 'numeric' : 'decimal'}
@@ -94,6 +114,8 @@ export const NumberField = React.memo(function NumberField({
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={bad ? 'Invalid number' : undefined}
       maxLength={7}
+      // Fixed-width columns: cap scaling so large accessibility text still fits the field.
+      maxFontSizeMultiplier={1.3}
       style={[s.input, muted && s.muted, bad && s.bad]}
     />
   );

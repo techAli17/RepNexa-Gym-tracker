@@ -172,7 +172,7 @@ describe('finishing', () => {
     expect([a.alreadyCompleted, b.alreadyCompleted].sort()).toEqual([false, true]);
     expect((await repos.backupState.get()).localRevision).toBe(1);
     expect(await services.history.list({ limit: 10 })).toHaveLength(1);
-    await expectCode(services.workouts.addSet(d.exercises[0].id, 'kg'), 'WORKOUT_NOT_ACTIVE');
+    await expectCode(services.workouts.pause(d.workout.id), 'WORKOUT_NOT_ACTIVE');
   });
 
   it('excludes paused time from the duration', async () => {

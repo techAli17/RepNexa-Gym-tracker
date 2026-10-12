@@ -1,4 +1,5 @@
 import type {
+  ExerciseUsage,
   WorkoutListQuery,
   WorkoutRepository,
 } from '../../../application/ports/repositories';
@@ -94,11 +95,16 @@ export class SqliteWorkoutRepository implements WorkoutRepository {
       where.push('w.started_at < ?');
       params.push(q.startedBefore);
     }
+    if (q.startedAfter != null) {
+      where.push('w.started_at >= ?');
+      params.push(q.startedAfter);
+    }
     if (q.exerciseId) {
       where.push('EXISTS (SELECT 1 FROM workout_exercises x WHERE x.workout_id = w.id AND x.exercise_id = ?)');
       params.push(q.exerciseId);
     }
-    params.push(Math.max(1, Math.min(200, Math.trunc(q.limit))));
+    // Analytics reads whole date ranges; the cap only guards against unbounded reads.
+    params.push(Math.max(1, Math.min(5000, Math.trunc(q.limit))));
     const rows = await this.db.query(
       `SELECT ${WORKOUT_COLS.split(', ').map(c => `w.${c}`).join(', ')},
         (SELECT COUNT(*) FROM workout_exercises we WHERE we.workout_id = w.id) AS exercise_count,
@@ -170,6 +176,10 @@ export class SqliteWorkoutRepository implements WorkoutRepository {
       updatedAt,
       id,
     ]);
+  }
+
+  async touch(id: Uuid, at: Timestamp): Promise<void> {
+    await this.db.run('UPDATE workouts SET updated_at = ? WHERE id = ?', [at, id]);
   }
 
   async markCompleted(id: Uuid, endedAt: Timestamp): Promise<boolean> {
@@ -340,6 +350,24 @@ export class SqliteWorkoutRepository implements WorkoutRepository {
       set: rowToSet(r),
       workoutId: String(r.w_id),
       workoutStartedAt: Number(r.w_started_at),
+    }));
+  }
+
+  async setWorkoutExerciseExercise(id: Uuid, exerciseId: Uuid, at: Timestamp): Promise<void> {
+    await this.db.run('UPDATE workout_exercises SET exercise_id = ?, updated_at = ? WHERE id = ?', [exerciseId, at, id]);
+  }
+
+  async exerciseUsage(): Promise<ExerciseUsage[]> {
+    const rows = await this.db.query(
+      `SELECT we.exercise_id, COUNT(DISTINCT w.id) AS n, MAX(w.started_at) AS last
+       FROM workout_exercises we JOIN workouts w ON w.id = we.workout_id
+       WHERE w.status = 'completed' AND w.deleted_at IS NULL
+       GROUP BY we.exercise_id ORDER BY n DESC, last DESC`,
+    );
+    return rows.map(r => ({
+      exerciseId: String(r.exercise_id),
+      workoutCount: Number(r.n),
+      lastPerformedAt: Number(r.last),
     }));
   }
 

@@ -33,6 +33,13 @@ export class SqlitePersonalRecordRepository implements PersonalRecordRepository 
     }
   }
 
+  async listAll(): Promise<PersonalRecord[]> {
+    const rows = await this.db.query(
+      'SELECT exercise_id, record_type, value, workout_id, set_id, achieved_at FROM personal_records ORDER BY achieved_at DESC',
+    );
+    return rows.map(rowToRecord);
+  }
+
   async countForWorkout(workoutId: Uuid): Promise<number> {
     const rows = await this.db.query<{ n: number }>(
       'SELECT COUNT(*) AS n FROM personal_records WHERE workout_id = ?',

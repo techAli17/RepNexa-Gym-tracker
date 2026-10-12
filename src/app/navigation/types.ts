@@ -7,16 +7,29 @@ export type TabParamList = {
   Home: undefined;
   History: undefined;
   Exercises: undefined;
+  Progress: undefined;
   Settings: undefined;
 };
+
+/** What the exercise picker does with the chosen exercise. */
+export type PickerMode =
+  | { mode: 'add' }
+  | { mode: 'replace'; workoutExerciseId: string; exerciseId: string }
+  | { mode: 'routine' };
 
 export type RootStackParamList = {
   Tabs: NavigatorScreenParams<TabParamList>;
   Workout: undefined;
-  ExercisePicker: undefined;
+  ExercisePicker: PickerMode;
   WorkoutSummary: undefined;
   WorkoutDetail: { id: string };
   ExerciseDetail: { id: string };
+  /** Create (no id) or edit a custom exercise. `pickFor` selects it in the picker flow afterwards. */
+  ExerciseForm: { id?: string; pickFor?: PickerMode };
+  Routines: undefined;
+  /** `addExerciseId` is how the picker hands an exercise back to the editor. */
+  RoutineEditor: { id?: string; addExerciseId?: string; addNonce?: number };
+  Backup: undefined;
 };
 
 export type RootScreenProps<K extends keyof RootStackParamList> = NativeStackScreenProps<RootStackParamList, K>;

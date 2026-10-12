@@ -1,4 +1,5 @@
 import { open } from 'react-native-nitro-sqlite';
+import { createMetaStore, type MetaStore } from './metaStore';
 import { createSqlDatabase, type NitroLikeConnection, type SqlDatabase } from './SqlDatabase';
 
 /**
@@ -8,4 +9,11 @@ import { createSqlDatabase, type NitroLikeConnection, type SqlDatabase } from '.
 export function openAppDatabase(ownerKey = 'local'): SqlDatabase {
   const safe = ownerKey.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 64) || 'local';
   return createSqlDatabase(open({ name: `repnexa-${safe}.db` }) as unknown as NitroLikeConnection);
+}
+
+let meta: Promise<MetaStore> | null = null;
+/** The shared meta store (which owner's database to open at launch). */
+export function openMetaStore(): Promise<MetaStore> {
+  meta ??= createMetaStore(createSqlDatabase(open({ name: 'repnexa-meta.db' }) as unknown as NitroLikeConnection));
+  return meta;
 }

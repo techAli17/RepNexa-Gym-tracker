@@ -1,8 +1,9 @@
 import type { SqlDatabase } from '../SqlDatabase';
 import { migration001 } from './001_initial';
+import { migration002 } from './002_backup';
 import type { Migration } from './types';
 
-export const MIGRATIONS: readonly Migration[] = [migration001];
+export const MIGRATIONS: readonly Migration[] = [migration001, migration002];
 
 export const LATEST_SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
 
