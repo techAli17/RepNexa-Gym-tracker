@@ -83,7 +83,7 @@ function previousText(
  * Values are shown in the viewer's unit; an edited value is saved in that unit,
  * untouched values keep the unit they were logged in.
  */
-export const SetRow = React.memo(function SetRow({
+export const SetRow = React.memo(function SetRowView({
   set,
   label,
   tracking,
@@ -240,10 +240,7 @@ export const SetRow = React.memo(function SetRow({
           set.setType === 'warmup' && { backgroundColor: t.colors.amberSoft },
         ]}
       >
-        <AppText
-          variant="label"
-          style={{ color: badgeColor, fontWeight: '800', fontSize: 15 }}
-        >
+        <AppText variant="label" style={[s.badgeText, { color: badgeColor }]}>
           {label}
         </AppText>
       </Pressable>
@@ -281,11 +278,7 @@ export const SetRow = React.memo(function SetRow({
           hitSlop={4}
           style={s.check}
         >
-          <AppText
-            style={{ color: t.colors.danger, fontSize: 18, fontWeight: '800' }}
-          >
-            ✕
-          </AppText>
+          <AppText style={s.removeText}>✕</AppText>
         </Pressable>
       ) : (
         <Pressable
@@ -296,15 +289,7 @@ export const SetRow = React.memo(function SetRow({
           hitSlop={4}
           style={[s.check, done && s.checkOn]}
         >
-          <AppText
-            style={{
-              color: done ? t.colors.surface : t.colors.ink3,
-              fontSize: 20,
-              fontWeight: '800',
-            }}
-          >
-            ✓
-          </AppText>
+          <AppText style={[s.checkText, done && s.checkTextOn]}>✓</AppText>
         </Pressable>
       )}
     </View>
@@ -346,4 +331,8 @@ const styles = (t: Theme) =>
       justifyContent: 'center',
     },
     checkOn: { backgroundColor: t.colors.good, borderColor: t.colors.good },
+    badgeText: { fontWeight: '800', fontSize: 15 },
+    removeText: { color: t.colors.danger, fontSize: 18, fontWeight: '800' },
+    checkText: { color: t.colors.ink3, fontSize: 20, fontWeight: '800' },
+    checkTextOn: { color: t.colors.surface },
   });

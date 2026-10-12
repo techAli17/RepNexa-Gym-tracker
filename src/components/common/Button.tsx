@@ -1,10 +1,22 @@
 import React from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import { useStyles, useTheme } from '../../theme/ThemeProvider';
 import { HIT, type Theme } from '../../theme/tokens';
 import { AppText } from './AppText';
 
-export type ButtonVariant = 'primary' | 'ink' | 'outline' | 'ghost' | 'danger' | 'dangerText';
+export type ButtonVariant =
+  | 'primary'
+  | 'ink'
+  | 'outline'
+  | 'ghost'
+  | 'danger'
+  | 'dangerText';
 
 export interface ButtonProps {
   label: string;
@@ -17,7 +29,16 @@ export interface ButtonProps {
   style?: StyleProp<ViewStyle>;
 }
 
-export function Button({ label, onPress, variant = 'primary', disabled, busy, compact, accessibilityHint, style }: ButtonProps) {
+export function Button({
+  label,
+  onPress,
+  variant = 'primary',
+  disabled,
+  busy,
+  compact,
+  accessibilityHint,
+  style,
+}: ButtonProps) {
   const s = useStyles(styles);
   const t = useTheme();
   const fg = {
@@ -36,12 +57,22 @@ export function Button({ label, onPress, variant = 'primary', disabled, busy, co
       accessibilityState={{ disabled: !!disabled || !!busy, busy: !!busy }}
       disabled={disabled || busy}
       onPress={onPress}
-      style={({ pressed }) => [s.base, compact && s.compact, s[variant], (disabled || busy) && s.disabled, pressed && s.pressed, style]}
+      style={({ pressed }) => [
+        s.base,
+        compact && s.compact,
+        s[variant],
+        (disabled || busy) && s.disabled,
+        pressed && s.pressed,
+        style,
+      ]}
     >
       {busy ? (
         <ActivityIndicator color={fg} />
       ) : (
-        <AppText variant="label" style={{ color: fg, fontSize: compact ? 14 : 16, fontWeight: '700' }}>
+        <AppText
+          variant="label"
+          style={[s.label, compact && s.labelCompact, { color: fg }]}
+        >
           {label}
         </AppText>
       )}
@@ -58,13 +89,28 @@ const styles = (t: Theme) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
-    compact: { minHeight: HIT, paddingHorizontal: t.spacing.md, borderRadius: t.radii.sm + 2 },
+    compact: {
+      minHeight: HIT,
+      paddingHorizontal: t.spacing.md,
+      borderRadius: t.radii.sm + 2,
+    },
     primary: { backgroundColor: t.colors.amber },
     ink: { backgroundColor: t.colors.ink },
-    outline: { backgroundColor: t.colors.surface, borderWidth: 1, borderColor: t.colors.line },
-    ghost: { backgroundColor: 'transparent', borderWidth: 1.5, borderStyle: 'dashed', borderColor: t.colors.line },
+    outline: {
+      backgroundColor: t.colors.surface,
+      borderWidth: 1,
+      borderColor: t.colors.line,
+    },
+    ghost: {
+      backgroundColor: 'transparent',
+      borderWidth: 1.5,
+      borderStyle: 'dashed',
+      borderColor: t.colors.line,
+    },
     danger: { backgroundColor: t.colors.danger },
     dangerText: { backgroundColor: 'transparent' },
+    label: { fontSize: 16, fontWeight: '700' },
+    labelCompact: { fontSize: 14 },
     disabled: { opacity: 0.45 },
     pressed: { opacity: 0.8, transform: [{ scale: 0.985 }] },
   });

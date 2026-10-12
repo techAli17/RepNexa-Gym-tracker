@@ -1,4 +1,4 @@
-appId: ${APP_ID || "org.reactjs.native.example.RepNexa"}
+appId: ${APP_ID || "com.repnexa"}
 name: Without Google set up, the app is honest and export still works
 ---
 - launchApp:
@@ -6,7 +6,7 @@ name: Without Google set up, the app is honest and export still works
 - extendedWaitUntil:
     visible: "Saved on this phone only"
     timeout: 60000
-- tapOn: "Settings, tab.*"
+- tapOn: "Settings(, tab.*)?"
 - tapOn: "Google Drive backup.*"
 - assertVisible: "Google sign-in is not set up in this build.*"
 - assertVisible: "Export"

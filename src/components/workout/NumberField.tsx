@@ -1,11 +1,19 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { StyleSheet, TextInput } from 'react-native';
+import { Platform, StyleSheet, TextInput } from 'react-native';
 import { parseNumericInput } from '../../domain/validation';
 import { useStyles, useTheme } from '../../theme/ThemeProvider';
 import type { Theme } from '../../theme/tokens';
 import { inputText } from '../../utils/format';
 
 const COMMIT_DELAY_MS = 450;
+
+/**
+ * Android: a single-line EditText with centred text reports it can scroll
+ * sideways, so React Native never hands a swipe that starts on it to the list,
+ * and the workout screen (mostly number fields) would not scroll. A one-line
+ * multiline field does not scroll sideways; maxLength keeps it to one line.
+ */
+const ANDROID_NO_HSCROLL = Platform.OS === 'android';
 
 /** Commits of fields with a typed but not yet saved value, keyed per field. */
 const pending = new Map<symbol, () => Promise<void>>();
@@ -34,7 +42,7 @@ export interface NumberFieldProps {
  * pause or on blur. Saving mid-typing means an app kill loses at most the last
  * half second of input, without a write per keystroke.
  */
-export const NumberField = React.memo(function NumberField({
+export const NumberField = React.memo(function NumberFieldInput({
   value,
   onCommit,
   integer,
@@ -114,6 +122,9 @@ export const NumberField = React.memo(function NumberField({
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={bad ? 'Invalid number' : undefined}
       maxLength={7}
+      multiline={ANDROID_NO_HSCROLL}
+      numberOfLines={1}
+      submitBehavior="blurAndSubmit"
       // Fixed-width columns: cap scaling so large accessibility text still fits the field.
       maxFontSizeMultiplier={1.3}
       style={[s.input, muted && s.muted, bad && s.bad]}
@@ -131,6 +142,11 @@ const styles = (t: Theme) =>
       backgroundColor: t.colors.surface2,
       color: t.colors.ink,
       textAlign: 'center',
+      textAlignVertical: 'center', // Android multiline defaults to top
+      // Android: no font/vertical padding, so the text fits the box and the field
+      // does not report vertical scroll either (see ANDROID_NO_HSCROLL).
+      paddingVertical: 0,
+      includeFontPadding: false,
       paddingHorizontal: 4,
       ...t.type.number,
     },

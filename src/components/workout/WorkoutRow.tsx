@@ -7,7 +7,7 @@ import type { Theme } from '../../theme/tokens';
 import { formatDate, formatDuration, formatVolume } from '../../utils/format';
 import { AppText } from '../common/AppText';
 
-export const WorkoutRow = React.memo(function WorkoutRow({
+export const WorkoutRow = React.memo(function WorkoutRowView({
   item,
   unit,
   onPress,

@@ -81,7 +81,7 @@ Dependency direction: `features → store/app → application → domain`; `infr
 
 Left out on purpose:
 
-- **Notifee:** unmaintained since December 2024, so rest timers alert only in-app.
+- **Notification libraries:** rest timers alert in-app only, by decision. This avoids Expo modules (this is a bare React Native app) and custom native code; Notifee has been unmaintained since December 2024.
 - **Keychain:** no credentials are stored.
 - **Reanimated:** motion is limited to native transitions for now.
 
@@ -89,10 +89,10 @@ Left out on purpose:
 
 - **Google sign-in needs your OAuth client IDs.** See [GOOGLE_SETUP.md](GOOGLE_SETUP.md). Sign-in and Drive are tested against fakes, not against a live Google account.
 - **No exercise images.** Their provenance is unverified; see [EXERCISE_IMAGES.md](EXERCISE_IMAGES.md).
-- **Rest timer alerts only while the app is open.**
+- **Rest timer alerts only while the app is open (by decision).** The timer runs on an end timestamp, so coming back late shows the rest as over and vibrates at once.
 - **No "drive only" storage mode.** Only the phone-plus-Drive policy exists; the type is ready for a strict cloud-only policy added later as an explicit choice.
 - **Pruned workouts are viewable only after a restore.** Older workouts removed by retention are not viewable in the app until restored from Drive.
 - **Finished workouts can't gain exercises.** Exercises cannot be added to a finished workout (sets, values, order, names and notes can be edited).
 - **History PR badges count current records.** The badge shows records the workout still holds, so it can drop when a later workout beats one.
-- **End-to-end coverage is iOS only.** Five Maestro flows pass on the iOS 26.5 simulator; they have not been run on an Android emulator yet.
+- **End-to-end coverage:** five Maestro flows pass on Release builds on the iOS 26.5 simulator and an Android emulator.
 - **No on-device checks yet.** No performance profiling on real devices, and no full VoiceOver or TalkBack pass.

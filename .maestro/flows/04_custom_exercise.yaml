@@ -1,12 +1,12 @@
-appId: ${APP_ID || "org.reactjs.native.example.RepNexa"}
+appId: ${APP_ID || "com.repnexa"}
 name: Create a custom exercise and find it in the library
 ---
 - launchApp:
     clearState: true
 - extendedWaitUntil:
-    visible: "Exercises, tab.*"
+    visible: "Exercises(, tab.*)?"
     timeout: 60000
-- tapOn: "Exercises, tab.*"
+- tapOn: "Exercises(, tab.*)?"
 - tapOn: "Create exercise"
 - tapOn: "Exercise name"
 - inputText: "Zercher Squat"
@@ -22,7 +22,7 @@ name: Create a custom exercise and find it in the library
     below: "What you log"
 - assertVisible: "Zercher Squat"
 - assertVisible: ".*Custom.*"
-- tapOn: "Back"   # iOS header back button (Maestro `back` is Android-only)
+- tapOn: "Back|Navigate up"   # header back button: iOS label | Android label
 - tapOn: "Search exercises"
 - inputText: "zercher"
 - assertVisible: "1 exercise"

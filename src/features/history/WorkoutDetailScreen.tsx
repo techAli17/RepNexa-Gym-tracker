@@ -246,9 +246,11 @@ export function WorkoutDetailScreen({ route, navigation }: RootScreenProps<'Work
   );
 }
 
+const deltaStyle = { fontWeight: '700' } as const;
+
 function Delta({ label, d }: { label: string; d: { text: string; up: boolean | null } }) {
   return (
-    <AppText variant="caption" color={d.up == null ? 'ink3' : d.up ? 'good' : 'danger'} style={{ fontWeight: '700' }}>
+    <AppText variant="caption" color={d.up == null ? 'ink3' : d.up ? 'good' : 'danger'} style={deltaStyle}>
       {' '}
       {label} {d.text}
     </AppText>

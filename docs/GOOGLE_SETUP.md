@@ -20,7 +20,7 @@ Create three clients under **Credentials → Create credentials → OAuth client
 | --- | --- | --- |
 | Web application | none | `webClientId` (Android requests tokens with it) |
 | Android | package `com.repnexa`, SHA-1 of each signing key (debug and release) | lets Android sign in |
-| iOS | bundle ID from Xcode (`org.reactjs.native.example.RepNexa` until you change it) | `iosClientId` |
+| iOS | bundle ID `com.repnexa` (change it in Xcode if you use your own domain) | `iosClientId` |
 
 Debug SHA-1: `cd android && ./gradlew signingReport`. Add your Play upload key and the Play App Signing key's SHA-1 before release.
 

@@ -1,4 +1,4 @@
-appId: ${APP_ID || "org.reactjs.native.example.RepNexa"}
+appId: ${APP_ID || "com.repnexa"}
 name: A killed app reopens the workout with every logged set
 ---
 - launchApp:

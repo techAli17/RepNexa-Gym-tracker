@@ -1,4 +1,4 @@
-appId: ${APP_ID || "org.reactjs.native.example.RepNexa"}
+appId: ${APP_ID || "com.repnexa"}
 name: Log and finish a workout, then see it in history
 ---
 - launchApp:
@@ -24,11 +24,11 @@ name: Log and finish a workout, then see it in history
 - tapOn: "Finish"
 - assertVisible: "Finish workout?"  # two unchecked sets remain
 - tapOn:
-    text: "Finish"
-    index: 1
+    text: "Finish|FINISH"     # iOS | Android alert button
+    below: "Finish workout\\?"   # not the header button behind the alert
 - assertVisible: "Workout complete"
 - assertVisible: "No new records this time.*"
 - tapOn: "Done"
-- tapOn: "History, tab.*"
+- tapOn: "History(, tab.*)?"
 - assertVisible: "Workout.*"
 - assertVisible: ".*500 kg.*1 sets.*"
