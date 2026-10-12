@@ -45,6 +45,12 @@ function migrateToCurrent(raw: Record<string, unknown>): Record<string, unknown>
 
 /** Ids must be unique and every reference must resolve inside the file. */
 export function checkIntegrity(data: BackupData): void {
+  if (data.plan) {
+    const days = data.plan.days.map(d => d.weekday);
+    if (new Set(days).size !== days.length) {
+      throw new BackupFormatError('DUPLICATE_IDS', 'The weekly plan lists the same day twice.');
+    }
+  }
   const seen = new Set<string>();
   const dup = (id: string) => {
     if (seen.has(id)) throw new BackupFormatError('DUPLICATE_IDS', 'The backup contains the same item twice.', { id });

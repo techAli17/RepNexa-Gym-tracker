@@ -13,6 +13,8 @@ import { HistoryScreen } from '../../features/history/HistoryScreen';
 import { WorkoutDetailScreen } from '../../features/history/WorkoutDetailScreen';
 import { RoutineEditorScreen } from '../../features/routines/RoutineEditorScreen';
 import { RoutinesScreen } from '../../features/routines/RoutinesScreen';
+import { WeekPlanScreen } from '../../features/plan/WeekPlanScreen';
+import { GymProfileScreen } from '../../features/settings/GymProfileScreen';
 import { BackupScreen } from '../../features/settings/BackupScreen';
 import { SettingsScreen } from '../../features/settings/SettingsScreen';
 import { WorkoutScreen } from '../../features/workouts/WorkoutScreen';
@@ -104,6 +106,8 @@ export function RootNavigator() {
         <Stack.Screen name="Routines" component={RoutinesScreen} options={{ title: 'Routines' }} />
         <Stack.Screen name="RoutineEditor" component={RoutineEditorScreen} options={{ title: 'Routine' }} />
         <Stack.Screen name="Backup" component={BackupScreen} options={{ title: 'Backup and data' }} />
+        <Stack.Screen name="WeekPlan" component={WeekPlanScreen} options={{ title: 'Weekly plan' }} />
+        <Stack.Screen name="GymProfile" component={GymProfileScreen} options={{ title: 'My gym' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

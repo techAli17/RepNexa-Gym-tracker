@@ -21,6 +21,13 @@ export interface AppSettings {
    * null keeps everything.
    */
   localRetentionMonths: number | null;
+  /** The user's own name for their gym, shown on Home. */
+  gymName: string | null;
+  /**
+   * Gym photo in the app's private documents folder, stored as a file name
+   * (not a path: the documents path changes between iOS installs). Never backed up.
+   */
+  gymPhotoFile: string | null;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -30,4 +37,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   storagePolicy: 'phone_and_drive',
   autoBackup: true,
   localRetentionMonths: null,
+  gymName: null,
+  gymPhotoFile: null,
 };

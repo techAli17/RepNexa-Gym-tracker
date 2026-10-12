@@ -2,13 +2,15 @@ import {
   BACKUP_FILE_NAME,
   BACKUP_FORMAT,
   BACKUP_SCHEMA_VERSION,
+  fromIso,
   toIso,
   type BackupData,
+  type BackupPlan,
   type BackupFile,
 } from '../../domain/backup/format';
 import { isEmptyChange, mergeBackups, type MergeStats } from '../../domain/backup/merge';
 import { BackupFormatError, parseBackup } from '../../domain/backup/parse';
-import type { AppSettings } from '../../domain/models';
+import type { AppSettings, WeekPlanRecord, Weekday } from '../../domain/models';
 import { CloudError, type AccountInfo, type CloudBackupStore, type RemoteFile } from '../ports/cloud';
 import type { Repositories, SyncState, UnitOfWork } from '../ports/repositories';
 import type { Clock } from '../ports/system';
@@ -31,6 +33,23 @@ export interface BackupStatus extends SyncState {
 }
 
 const MAX_CONFLICT_RETRIES = 3;
+
+const toBackupPlan = (p: WeekPlanRecord): BackupPlan => ({
+  weekStart: p.weekStart,
+  updatedAt: toIso(p.updatedAt),
+  days: p.days.map(d => ({ weekday: d.weekday, routineId: d.routineId, isRest: d.isRest, updatedAt: toIso(d.updatedAt) })),
+});
+
+const fromBackupPlan = (p: BackupPlan): WeekPlanRecord => ({
+  weekStart: p.weekStart as Weekday,
+  updatedAt: fromIso(p.updatedAt),
+  days: p.days.map(d => ({
+    weekday: d.weekday as Weekday,
+    routineId: d.routineId,
+    isRest: d.isRest,
+    updatedAt: fromIso(d.updatedAt),
+  })),
+});
 const MONTH_MS = 30.44 * 86_400_000;
 
 export class BackupService {
@@ -59,7 +78,25 @@ export class BackupService {
     const data = await r.backupData.exportData();
     const prefs = await this.d.loadSettings(r);
     const revision = (await r.backupState.get()).localRevision;
-    return { file: this.wrap({ ...data, preferences: { weightUnit: prefs.weightUnit, theme: prefs.theme, defaultRestSeconds: prefs.defaultRestSeconds } }, revision), revision };
+    const plan = await r.plan.get();
+    const preferences = {
+      weightUnit: prefs.weightUnit,
+      theme: prefs.theme,
+      defaultRestSeconds: prefs.defaultRestSeconds,
+      gymName: prefs.gymName,
+    };
+    return {
+      file: this.wrap(
+        {
+          ...data,
+          preferences,
+          // An untouched default plan is left out, so it never overrides a real one elsewhere.
+          plan: plan.updatedAt > 0 ? toBackupPlan(plan) : undefined,
+        },
+        revision,
+      ),
+      revision,
+    };
   }
 
   private wrap(data: BackupData, revision: number): BackupFile {
@@ -113,6 +150,7 @@ export class BackupService {
     const m = mergeBackups(local.data, incoming, pruned);
     if (isEmptyChange(m.toApply)) return m.stats;
     const affected = await r.backupData.applyChanges(m.toApply);
+    if (m.toApply.plan) await r.plan.replace(fromBackupPlan(m.toApply.plan));
     await rebuildRecords(r, affected, this.d.clock.now());
     await r.backupState.bumpLocalRevision();
     return m.stats;

@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import {
+  ImageBackground,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -32,6 +33,9 @@ import { useStyles } from '../../theme/ThemeProvider';
 import type { Theme } from '../../theme/tokens';
 import { formatDate, formatDuration, formatVolume } from '../../utils/format';
 import { useStartRoutine } from '../routines/RoutinesScreen';
+import type { WeekPlanView } from '../../application/plan/PlanService';
+import { WEEKDAY_SHORT } from '../../domain/models';
+import { GymPhotoStore } from '../../infrastructure/gym-photo/GymPhotoStore';
 
 const DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 const DAY_NAMES = [
@@ -72,18 +76,23 @@ export function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
   const [weeks, setWeeks] = useState<WeekBucket[]>([]);
   const [routines, setRoutines] = useState<RoutineSummary[]>([]);
   const [streak, setStreak] = useState(0);
+  const [plan, setPlan] = useState<WeekPlanView | null>(null);
+  const gymName = useSettings(x => x.settings.gymName);
+  const gymPhoto = useSettings(x => x.settings.gymPhotoFile);
   const [refreshing, setRefreshing] = useState(false);
   const [starting, setStarting] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const [r, w, ws, rs, st] = await Promise.all([
+      const [r, w, ws, rs, st, pl] = await Promise.all([
         services.history.list({ limit: 5 }),
         services.history.thisWeek(),
         services.analytics.weekly(8),
         services.routines.list(),
         services.analytics.weekStreak(),
+        services.plan.get(),
       ]);
+      setPlan(pl);
       setRecent(r);
       setWeek(w);
       setWeeks(ws);
@@ -115,7 +124,15 @@ export function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
   };
 
   const todayIndex = (new Date().getDay() + 6) % 7;
-  const next = nextRoutine(routines, recent);
+  const today = plan?.days.find(d => d.isToday) ?? null;
+  const planned = !!plan && plan.days.some(d => d.kind !== 'unplanned');
+  // A planned training day wins; on unplanned days the routine rotation suggests one.
+  const next =
+    today?.kind === 'training'
+      ? today.routine
+      : today?.kind === 'rest'
+      ? null
+      : nextRoutine(routines, recent);
   const df = (ts: number) => formatDate(ts, { day: 'numeric', month: 'short' });
 
   return (
@@ -133,6 +150,35 @@ export function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
         />
       }
     >
+      {gymName || gymPhoto ? (
+        <Pressable
+          style={s.gym}
+          onPress={() => navigation.navigate('GymProfile')}
+          accessibilityRole="button"
+          accessibilityLabel={`${gymName ?? 'My gym'}. Edit gym photo and name`}
+        >
+          {gymPhoto ? (
+            <ImageBackground
+              source={{ uri: GymPhotoStore.uri(gymPhoto) }}
+              style={s.gymImage}
+              resizeMode="cover"
+            >
+              <View style={s.gymShade}>
+                <AppText style={s.gymName} numberOfLines={1}>
+                  {gymName ?? 'My gym'}
+                </AppText>
+              </View>
+            </ImageBackground>
+          ) : (
+            <View style={s.gymPlain}>
+              <Icon name="barbell" size={20} tint="ink2" />
+              <AppText variant="heading" numberOfLines={1}>
+                {gymName}
+              </AppText>
+            </View>
+          )}
+        </Pressable>
+      ) : null}
       <AppText color="ink2">{greeting()}</AppText>
       <View style={s.mtSm}>
         <BackupStatus onPress={() => navigation.navigate('Backup')} />
@@ -168,12 +214,14 @@ export function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
           style={s.hero}
           onPress={() => void startRoutine(next.routine.id)}
           accessibilityRole="button"
-          accessibilityLabel={`Next up: ${next.routine.name}, ${next.exerciseNames.length} exercises`}
+          accessibilityLabel={`${
+            today?.kind === 'training' ? `Today, ${today.name}` : 'Next up'
+          }: ${next.routine.name}, ${next.exerciseNames.length} exercises`}
           accessibilityHint="Starts this routine"
         >
           <View style={s.flex}>
             <AppText variant="caption" style={s.onAmberDim}>
-              Next up
+              {today?.kind === 'training' ? `Today · ${today.name}` : 'Next up'}
             </AppText>
             <AppText style={s.heroTitle} numberOfLines={1}>
               {next.routine.name}
@@ -191,6 +239,89 @@ export function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
               Start
             </AppText>
           </View>
+        </Pressable>
+      ) : today?.kind === 'rest' ? (
+        <View
+          style={s.rest}
+          accessible
+          accessibilityLabel={`Today, ${today.name}: rest day`}
+        >
+          <AppText variant="caption" color="good">
+            Today · {today.name}
+          </AppText>
+          <AppText style={s.restTitle}>Rest day</AppText>
+          <AppText color="ink2">
+            Recovery is part of training. You can still log a workout below.
+          </AppText>
+        </View>
+      ) : null}
+
+      {plan ? (
+        <Pressable
+          style={s.weekStrip}
+          onPress={() => navigation.navigate('WeekPlan')}
+          accessibilityRole="button"
+          accessibilityLabel={
+            planned
+              ? `Weekly plan: ${plan.days
+                  .map(
+                    d =>
+                      `${d.name} ${
+                        d.kind === 'training'
+                          ? d.routine!.routine.name
+                          : d.kind === 'rest'
+                          ? 'rest'
+                          : 'not planned'
+                      }`,
+                  )
+                  .join(', ')}`
+              : 'Plan your week'
+          }
+        >
+          {planned ? (
+            plan.days.map(d => (
+              <View
+                key={d.weekday}
+                style={[s.planDay, d.isToday && s.planDayToday]}
+                importantForAccessibility="no-hide-descendants"
+              >
+                <AppText
+                  variant="caption"
+                  color={d.isToday ? 'accent' : 'ink3'}
+                  style={s.planDayName}
+                >
+                  {WEEKDAY_SHORT[d.weekday]}
+                </AppText>
+                <View
+                  style={[
+                    s.planDot,
+                    d.kind === 'training' && s.planDotOn,
+                    d.kind === 'rest' && s.planDotRest,
+                  ]}
+                >
+                  <AppText
+                    style={[
+                      s.planDotText,
+                      d.kind === 'training' && s.planDotTextOn,
+                    ]}
+                  >
+                    {d.kind === 'rest' ? 'R' : d.kind === 'training' ? '•' : ''}
+                  </AppText>
+                </View>
+              </View>
+            ))
+          ) : (
+            <View style={s.planEmpty}>
+              <Icon name="timer" size={20} tint="accent" />
+              <View style={s.flex}>
+                <AppText variant="label">Plan your week</AppText>
+                <AppText variant="caption" color="ink3">
+                  Choose training and rest days, and what to train each day.
+                </AppText>
+              </View>
+              <Icon name="chevronRight" size={18} tint="ink3" />
+            </View>
+          )}
         </Pressable>
       ) : null}
 
@@ -390,6 +521,72 @@ const styles = (t: Theme) =>
     mt: { marginTop: 14 },
     mtSm: { marginTop: 10 },
     bold: { fontWeight: '700' },
+    gym: { borderRadius: 20, overflow: 'hidden', marginBottom: 12 },
+    gymImage: { aspectRatio: 16 / 7, justifyContent: 'flex-end' },
+    gymShade: {
+      backgroundColor: 'rgba(0,0,0,0.35)',
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+    },
+    gymName: { color: '#FFFFFF', fontSize: 22, fontWeight: '800' },
+    gymPlain: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      backgroundColor: t.colors.surface,
+      borderWidth: 1,
+      borderColor: t.colors.line,
+      borderRadius: 20,
+      padding: 14,
+    },
+    rest: {
+      marginTop: 14,
+      backgroundColor: t.colors.goodSoft,
+      borderRadius: 24,
+      padding: 18,
+      gap: 4,
+    },
+    restTitle: { fontSize: 30, fontWeight: '800', color: t.colors.ink },
+    weekStrip: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginTop: 12,
+      backgroundColor: t.colors.surface,
+      borderWidth: 1,
+      borderColor: t.colors.line,
+      borderRadius: 18,
+      paddingVertical: 10,
+      paddingHorizontal: 10,
+    },
+    planDay: {
+      alignItems: 'center',
+      gap: 4,
+      flex: 1,
+      paddingVertical: 2,
+      borderRadius: 10,
+    },
+    planDayToday: { backgroundColor: t.colors.amberSoft },
+    planDayName: { fontWeight: '700' },
+    planDot: {
+      width: 26,
+      height: 26,
+      borderRadius: 13,
+      backgroundColor: t.colors.surface2,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    planDotOn: { backgroundColor: t.colors.ink },
+    planDotRest: { backgroundColor: t.colors.goodSoft },
+    planDotText: { fontSize: 12, fontWeight: '800', color: t.colors.good },
+    planDotTextOn: { color: t.colors.bg },
+    planEmpty: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      paddingHorizontal: 4,
+      paddingVertical: 4,
+    },
     hero: {
       marginTop: 14,
       flexDirection: 'row',

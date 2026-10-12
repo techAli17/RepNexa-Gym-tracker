@@ -27,8 +27,13 @@ export type RootStackParamList = {
   /** Create (no id) or edit a custom exercise. `pickFor` selects it in the picker flow afterwards. */
   ExerciseForm: { id?: string; pickFor?: PickerMode };
   Routines: undefined;
-  /** `addExerciseId` is how the picker hands an exercise back to the editor. */
-  RoutineEditor: { id?: string; addExerciseId?: string; addNonce?: number };
+  /**
+   * `addExerciseId` is how the picker hands an exercise back to the editor.
+   * `planDay` (0 = Sunday … 6 = Saturday) assigns a newly created routine to that day of the weekly plan.
+   */
+  RoutineEditor: { id?: string; addExerciseId?: string; addNonce?: number; planDay?: number };
+  WeekPlan: undefined;
+  GymProfile: undefined;
   Backup: undefined;
 };
 

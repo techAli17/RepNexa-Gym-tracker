@@ -54,6 +54,8 @@ xcrun simctl spawn <device-id> defaults write com.apple.keyboard.preferences Did
 - **Crash recovery:** every edit is saved immediately and the active workout reopens after a crash.
 - **History:** month grouping, date and exercise filters, workout detail with comparison to the previous session, editing and deleting finished workouts, save as routine.
 - **Routines:** create, edit, duplicate, reorder, delete; push/pull/legs, upper/lower and full-body templates.
+- **Weekly plan:** choose the day your week starts, mark rest days, and set the exercises for each training day (missing exercises can be created on the spot). Home shows today's plan or a rest-day card.
+- **My gym:** a name and a photo (camera or library, cropped to a banner) shown on Home. The photo stays on the phone.
 - **Exercise library:** search, muscle-group filters, custom exercises (create, edit, delete), similar exercises, your records per exercise.
 - **Progress:** estimated 1-rep max trend, weekly volume and frequency, week streak, personal records, date ranges.
 - **Backup and data:**

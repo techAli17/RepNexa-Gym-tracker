@@ -36,6 +36,12 @@ Dependency direction: `features → store/app → application → domain`; `infr
 | Crash safety | Every edit is committed before the UI updates; the active workout reloads at launch; `synchronous=FULL`. |
 | No duplicate finish | `in_progress → completed` transition guard; the Finish button also guards re-entry. |
 
+## Weekly plan and gym profile
+
+- **Plan** (`application/plan/PlanService.ts`, migration 003): `plan_settings` holds the week-start day; `plan_days` has one row per planned weekday, either a rest day or a link to a routine. A training day's exercises are a routine, so they reuse the routine editor, targets and reordering. Deleting a routine leaves its day "not planned" (`ON DELETE SET NULL`).
+- **Gym profile**: the name and the photo's file name live in settings. The photo is cropped to 16:9 by react-native-image-crop-picker and copied into the app's private documents folder (`infrastructure/gym-photo`). Only the file name is stored, because the iOS documents path changes between installs.
+- **Backups**: the plan travels as an optional `plan` section (older files without it stay valid) and merges as one unit, newest wins. The gym name is a backed-up preference. The photo is not backed up or exported.
+
 ## Backup
 
 **Format** (`domain/backup/format.ts`): `{ format: "repnexa.backup", schemaVersion: 1, exportedAt, appVersion, dataRevision, data }`. Workouts and routines are nested aggregates (exercises → sets inside), so references cannot dangle. `parseBackup` checks size, JSON, format, version (older versions are upgraded stepwise, newer ones refused), the Zod schema, unique IDs and references.
@@ -78,6 +84,7 @@ Dependency direction: `features → store/app → application → domain`; `infr
 | Google | @react-native-google-signin/google-signin 16 | Sign-in, scopes and tokens |
 | Drive | Plain `fetch` against the Drive v3 REST API | Small surface; no Google client SDK needed |
 | Files | @react-native-documents/picker, @dr.pogodin/react-native-fs, react-native-share | System picker, cache file, share sheet |
+| Gym photo | react-native-image-crop-picker 0.52 | Camera or library with cropping; actively maintained; no custom native code |
 
 Left out on purpose:
 

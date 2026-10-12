@@ -1,0 +1,18 @@
+appId: ${APP_ID || "com.repnexa"}
+name: Name the gym and see it on Home
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Settings(, tab.*)?"
+    timeout: 60000
+- tapOn: "Settings(, tab.*)?"
+- tapOn: "My gym.*"
+- assertVisible: "Add a photo of your gym|No gym photo yet"
+- assertVisible: "Take photo"
+- assertVisible: "Choose photo"
+- tapOn: "e.g. Iron Temple"     # the input (its caption also reads "Gym name")
+- inputText: "Iron Temple"
+- pressKey: Enter             # saves and goes back
+- tapOn: "Home(, tab.*)?"
+- assertVisible: "Iron Temple.*"

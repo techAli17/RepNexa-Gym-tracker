@@ -7,6 +7,7 @@ import { AnalyticsService } from './analytics/AnalyticsService';
 import { BackupService } from './backup/BackupService';
 import { ExerciseService } from './exercises/ExerciseService';
 import { HistoryService } from './history/HistoryService';
+import { PlanService } from './plan/PlanService';
 import { RoutineService } from './routines/RoutineService';
 import { systemClock, type Clock, type IdGenerator } from './ports/system';
 import { SettingsService } from './settings/SettingsService';
@@ -20,6 +21,7 @@ export interface AppServices {
   routines: RoutineService;
   analytics: AnalyticsService;
   backup: BackupService;
+  plan: PlanService;
   /** Subscribe to committed changes that need backing up. Returns an unsubscribe function. */
   onDataChanged(listener: () => void): () => void;
 }
@@ -45,12 +47,14 @@ export async function createAppServices(
     ids: opts.ids ?? uuidGenerator,
   };
   const settings = new SettingsService(deps);
+  const routines = new RoutineService(deps);
   const services: AppServices = {
     workouts: new WorkoutService(deps),
     exercises: new ExerciseService(deps),
     history: new HistoryService(deps),
     settings,
-    routines: new RoutineService(deps),
+    routines,
+    plan: new PlanService({ ...deps, routines }),
     analytics: new AnalyticsService(deps),
     backup: new BackupService({ ...deps, appVersion: APP_VERSION, loadSettings: r => settings.load(r) }),
     onDataChanged(listener) {

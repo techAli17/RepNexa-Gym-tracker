@@ -1,4 +1,7 @@
 import type {
+  PlanDayRecord,
+  WeekPlanRecord,
+  Weekday,
   Exercise,
   PersonalRecord,
   Routine,
@@ -178,6 +181,15 @@ export interface BackupDataRepository {
   clearRemote(): Promise<void>;
 }
 
+export interface PlanRepository {
+  get(): Promise<WeekPlanRecord>;
+  setWeekStart(weekStart: Weekday, at: Timestamp): Promise<void>;
+  /** Writes one day; `null` routine with isRest false keeps the day as "not planned". */
+  putDay(day: PlanDayRecord): Promise<void>;
+  /** Replaces the whole plan (restore from backup). */
+  replace(plan: WeekPlanRecord): Promise<void>;
+}
+
 export interface Repositories {
   exercises: ExerciseRepository;
   workouts: WorkoutRepository;
@@ -186,6 +198,7 @@ export interface Repositories {
   settings: SettingsRepository;
   backupState: BackupStateRepository;
   backupData: BackupDataRepository;
+  plan: PlanRepository;
 }
 
 /** Runs `fn` against repositories bound to one database transaction. */

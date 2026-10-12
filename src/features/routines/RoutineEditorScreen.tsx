@@ -11,6 +11,7 @@ import { Field, TextField } from '../../components/common/FormControls';
 import { Icon } from '../../components/common/Icon';
 import { Stepper } from '../../components/common/Stepper';
 import { RestPickerSheet } from '../../components/workout/RestPickerSheet';
+import { WEEKDAY_NAMES, type Weekday } from '../../domain/models';
 import { routineInputSchema } from '../../domain/validation';
 import { toast, toastError } from '../../store/toastStore';
 import { useStyles } from '../../theme/ThemeProvider';
@@ -25,7 +26,8 @@ const restText = (sec: number | null | undefined, fallback: number) => {
 };
 
 export function RoutineEditorScreen({ navigation, route }: RootScreenProps<'RoutineEditor'>) {
-  const { id, addExerciseId, addNonce } = route.params ?? {};
+  const { id, addExerciseId, addNonce, planDay } = route.params ?? {};
+  const dayName = planDay != null ? WEEKDAY_NAMES[planDay as Weekday] : null;
   const services = useServices();
   const defaultRest = useSettings(x => x.settings.defaultRestSeconds);
   const s = useStyles(styles);
@@ -34,13 +36,13 @@ export function RoutineEditorScreen({ navigation, route }: RootScreenProps<'Rout
   const [saving, setSaving] = useState(false);
   const { control, handleSubmit, reset, formState, watch } = useForm<FormIn, unknown, FormOut>({
     resolver: zodResolver(routineInputSchema),
-    defaultValues: { name: '', notes: '', exercises: [] },
+    defaultValues: { name: dayName ? `${dayName} workout` : '', notes: '', exercises: [] },
   });
   const { fields, append, remove, move, update } = useFieldArray({ control, name: 'exercises' });
   const exercises = watch('exercises');
 
   useEffect(() => {
-    navigation.setOptions({ title: id ? 'Edit routine' : 'New routine' });
+    navigation.setOptions({ title: id ? 'Edit routine' : dayName ? `${dayName}’s exercises` : 'New routine' });
     if (!id) return;
     services.routines.get(id).then(v => {
       if (!v) return;
@@ -57,7 +59,7 @@ export function RoutineEditorScreen({ navigation, route }: RootScreenProps<'Rout
         })),
       });
     }, toastError);
-  }, [id, navigation, reset, services]);
+  }, [id, dayName, navigation, reset, services]);
 
   // The picker hands a chosen exercise back through params; the nonce makes repeats count.
   useEffect(() => {
@@ -74,6 +76,7 @@ export function RoutineEditorScreen({ navigation, route }: RootScreenProps<'Rout
     setSaving(true);
     try {
       if (id) await services.routines.update(id, values);
+      else if (planDay != null) await services.plan.createDayRoutine(planDay, values);
       else await services.routines.create(values);
       toast('Routine saved');
       navigation.goBack();

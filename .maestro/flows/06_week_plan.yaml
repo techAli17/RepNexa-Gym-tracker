@@ -1,0 +1,44 @@
+appId: ${APP_ID || "com.repnexa"}
+name: Plan the week, rest days and a day built with a custom exercise
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Plan your week"
+    timeout: 60000
+- tapOn: "Plan your week"
+- assertVisible: "Week starts on"
+# Monday is first by default. Build its exercises.
+- tapOn:
+    text: "Add exercises"
+    index: 0
+- assertVisible: "Monday workout"
+- tapOn: ".*Add exercise"
+- tapOn: "Bench Press.*"
+# An exercise the library lacks: create it right from the picker.
+- tapOn: ".*Add exercise"
+- tapOn: "Create exercise"
+- tapOn: "Exercise name"
+- inputText: "Sled Push"
+- pressKey: Enter
+- tapOn:
+    text: "Legs"
+    below: "Muscle group"
+- scrollUntilVisible:
+    element: "Create exercise"
+    direction: DOWN
+- tapOn:
+    text: "Create exercise"
+    below: "What you log"
+- assertVisible: "2. Sled Push"
+- scrollUntilVisible:
+    element: "Save routine"
+    direction: DOWN
+- tapOn: "Save routine"
+- assertVisible: "Monday workout · 2 exercises"
+# Sunday becomes a rest day.
+- scrollUntilVisible:
+    element: "Sunday is a rest day"
+    direction: DOWN
+- tapOn: "Sunday is a rest day"
+- assertVisible: "Rest day"           # Sunday, now a rest day

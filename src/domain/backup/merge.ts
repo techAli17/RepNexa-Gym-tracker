@@ -1,4 +1,4 @@
-import type { BackupData, BackupExercise, BackupRoutine, BackupWorkout } from './format';
+import type { BackupData, BackupExercise, BackupPlan, BackupRoutine, BackupWorkout } from './format';
 import { fromIso } from './format';
 
 export interface MergeChanges {
@@ -6,6 +6,8 @@ export interface MergeChanges {
   workouts: BackupWorkout[];
   routines: BackupRoutine[];
   exercises: BackupExercise[];
+  /** Set when the incoming weekly plan is newer and must replace the local one. */
+  plan?: BackupPlan;
 }
 
 export interface MergeStats {
@@ -122,12 +124,20 @@ export function mergeBackups(local: BackupData, incoming: BackupData, skipLocal:
     }
   }
 
+  // The weekly plan is one unit: the newer one wins whole.
+  let plan = local.plan;
+  if (incoming.plan && (!local.plan || fromIso(incoming.plan.updatedAt) > fromIso(local.plan.updatedAt))) {
+    plan = incoming.plan;
+    toApply.plan = incoming.plan;
+  }
+
   return {
-    merged: { exercises, routines, workouts, preferences: { ...incoming.preferences, ...local.preferences } },
+    merged: { exercises, routines, workouts, preferences: { ...incoming.preferences, ...local.preferences }, plan },
     toApply,
     stats,
   };
 }
 
 /** True when the merge would change nothing locally. */
-export const isEmptyChange = (c: MergeChanges) => !c.workouts.length && !c.routines.length && !c.exercises.length;
+export const isEmptyChange = (c: MergeChanges) =>
+  !c.workouts.length && !c.routines.length && !c.exercises.length && !c.plan;

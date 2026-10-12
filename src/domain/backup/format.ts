@@ -104,8 +104,25 @@ export const backupPreferencesSchema = z
     weightUnit: z.enum(WEIGHT_UNITS),
     theme: z.enum(['system', 'light', 'dark']),
     defaultRestSeconds: z.number().int().min(0).max(3600),
+    gymName: z.string().max(60).nullable(),
   })
   .partial();
+
+/** Weekly plan. Optional: files from before the plan existed have none. */
+export const backupPlanSchema = z.object({
+  weekStart: z.number().int().min(0).max(6),
+  updatedAt: iso,
+  days: z
+    .array(
+      z.object({
+        weekday: z.number().int().min(0).max(6),
+        routineId: uuid.nullable(),
+        isRest: z.boolean(),
+        updatedAt: iso,
+      }),
+    )
+    .max(7),
+});
 
 export const backupDataSchema = z.object({
   /** Custom exercises, plus every built-in a workout or routine references (for older app versions). */
@@ -113,6 +130,7 @@ export const backupDataSchema = z.object({
   workouts: z.array(backupWorkoutSchema),
   routines: z.array(backupRoutineSchema),
   preferences: backupPreferencesSchema,
+  plan: backupPlanSchema.optional(),
 });
 
 export const backupFileSchema = z.object({
@@ -131,6 +149,7 @@ export type BackupWorkout = z.infer<typeof backupWorkoutSchema>;
 export type BackupExercise = z.infer<typeof backupExerciseSchema>;
 export type BackupRoutine = z.infer<typeof backupRoutineSchema>;
 export type BackupData = z.infer<typeof backupDataSchema>;
+export type BackupPlan = z.infer<typeof backupPlanSchema>;
 export type BackupFile = z.infer<typeof backupFileSchema>;
 
 export const toIso = (ms: number) => new Date(ms).toISOString();

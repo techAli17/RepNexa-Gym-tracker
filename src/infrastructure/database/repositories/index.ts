@@ -2,6 +2,7 @@ import type { Repositories, UnitOfWork } from '../../../application/ports/reposi
 import type { SqlDatabase, SqlExecutor } from '../SqlDatabase';
 import { SqliteBackupDataRepository } from './SqliteBackupDataRepository';
 import { SqliteExerciseRepository } from './SqliteExerciseRepository';
+import { SqlitePlanRepository } from './SqlitePlanRepository';
 import { SqliteRoutineRepository } from './SqliteRoutineRepository';
 import {
   SqliteBackupStateRepository,
@@ -19,6 +20,7 @@ export function createRepositories(db: SqlExecutor): Repositories {
     settings: new SqliteSettingsRepository(db),
     backupState: new SqliteBackupStateRepository(db),
     backupData: new SqliteBackupDataRepository(db),
+    plan: new SqlitePlanRepository(db),
   };
 }
 

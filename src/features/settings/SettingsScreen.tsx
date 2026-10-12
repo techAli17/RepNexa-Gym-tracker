@@ -27,7 +27,11 @@ function Segmented<T extends string | number>({
   return (
     <View style={s.setting}>
       <AppText style={s.flex}>{label}</AppText>
-      <View style={s.seg} accessibilityRole="radiogroup" accessibilityLabel={label}>
+      <View
+        style={s.seg}
+        accessibilityRole="radiogroup"
+        accessibilityLabel={label}
+      >
         {options.map(([v, l]) => {
           const on = v === value;
           return (
@@ -50,7 +54,15 @@ function Segmented<T extends string | number>({
   );
 }
 
-function Row({ label, detail, onPress }: { label: string; detail?: string; onPress: () => void }) {
+function Row({
+  label,
+  detail,
+  onPress,
+}: {
+  label: string;
+  detail?: string;
+  onPress: () => void;
+}) {
   const s = useStyles(styles);
   return (
     <Pressable style={s.row} onPress={onPress} accessibilityRole="button">
@@ -72,7 +84,8 @@ export function SettingsScreen({ navigation }: TabScreenProps<'Settings'>) {
   const update = useSettings(s => s.update);
   const account = useBackupStatus(s => s.account);
   const s = useStyles(styles);
-  const set = (patch: Partial<AppSettings>) => void update(patch).catch(toastError);
+  const set = (patch: Partial<AppSettings>) =>
+    void update(patch).catch(toastError);
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.body}>
@@ -83,24 +96,62 @@ export function SettingsScreen({ navigation }: TabScreenProps<'Settings'>) {
         </View>
         <Row
           label={account ? account.email : 'Google Drive backup'}
-          detail={account ? 'Backup, restore, export and import' : 'Sign in, export and import'}
+          detail={
+            account
+              ? 'Backup, restore, export and import'
+              : 'Sign in, export and import'
+          }
           onPress={() => navigation.navigate('Backup')}
         />
       </Card>
 
       <Card style={s.mt}>
         <AppText variant="heading">Workout</AppText>
-        <Segmented label="Weight unit" value={settings.weightUnit} options={[['kg', 'kg'], ['lb', 'lb']]} onChange={v => set({ weightUnit: v })} />
+        <Segmented
+          label="Weight unit"
+          value={settings.weightUnit}
+          options={[
+            ['kg', 'kg'],
+            ['lb', 'lb'],
+          ]}
+          onChange={v => set({ weightUnit: v })}
+        />
         <Segmented
           label="Default rest"
           value={settings.defaultRestSeconds}
-          options={[[60, '1:00'], [90, '1:30'], [120, '2:00'], [180, '3:00']]}
+          options={[
+            [60, '1:00'],
+            [90, '1:30'],
+            [120, '2:00'],
+            [180, '3:00'],
+          ]}
           onChange={v => set({ defaultRestSeconds: v })}
         />
         <AppText variant="caption" color="ink3" style={s.note}>
-          Changing the unit converts what you see. Sets keep the unit they were logged in, so nothing is rounded away.
+          Changing the unit converts what you see. Sets keep the unit they were
+          logged in, so nothing is rounded away.
         </AppText>
-        <Row label="Routines" detail="Create, edit and order your routines" onPress={() => navigation.navigate('Routines')} />
+        <Row
+          label="Routines"
+          detail="Create, edit and order your routines"
+          onPress={() => navigation.navigate('Routines')}
+        />
+        <Row
+          label="Weekly plan"
+          detail="Training and rest days, and what to train each day"
+          onPress={() => navigation.navigate('WeekPlan')}
+        />
+        <Row
+          label="My gym"
+          detail={
+            settings.gymName
+              ? `${settings.gymName}${
+                  settings.gymPhotoFile ? ' · photo saved' : ''
+                }`
+              : 'Add your gym’s name and photo'
+          }
+          onPress={() => navigation.navigate('GymProfile')}
+        />
       </Card>
 
       <Card style={s.mt}>
@@ -108,7 +159,11 @@ export function SettingsScreen({ navigation }: TabScreenProps<'Settings'>) {
         <Segmented
           label="Theme"
           value={settings.theme}
-          options={[['system', 'System'], ['light', 'Light'], ['dark', 'Dark']]}
+          options={[
+            ['system', 'System'],
+            ['light', 'Light'],
+            ['dark', 'Dark'],
+          ]}
           onChange={v => set({ theme: v })}
         />
       </Card>
@@ -159,8 +214,22 @@ const styles = (t: Theme) =>
       borderTopColor: t.colors.line,
       marginTop: 8,
     },
-    seg: { flexDirection: 'row', backgroundColor: t.colors.surface2, borderWidth: 1, borderColor: t.colors.line, borderRadius: 12, padding: 3 },
-    segBtn: { minHeight: 36, minWidth: 44, paddingHorizontal: 10, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+    seg: {
+      flexDirection: 'row',
+      backgroundColor: t.colors.surface2,
+      borderWidth: 1,
+      borderColor: t.colors.line,
+      borderRadius: 12,
+      padding: 3,
+    },
+    segBtn: {
+      minHeight: 36,
+      minWidth: 44,
+      paddingHorizontal: 10,
+      borderRadius: 9,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     segOn: {
       backgroundColor: t.colors.surface,
       shadowColor: '#000',
@@ -169,6 +238,13 @@ const styles = (t: Theme) =>
       shadowOffset: { width: 0, height: 1 },
       elevation: 1,
     },
-    row: { flexDirection: 'row', alignItems: 'center', minHeight: 56, borderTopWidth: 1, borderTopColor: t.colors.line, marginTop: 10 },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      minHeight: 56,
+      borderTopWidth: 1,
+      borderTopColor: t.colors.line,
+      marginTop: 10,
+    },
     note: { marginTop: 8 },
   });

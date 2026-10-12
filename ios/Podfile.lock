@@ -1850,6 +1850,55 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - RNImageCropPicker (0.52.0):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-bridging
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-RCTImage
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - RNImageCropPicker/QBImagePickerController (= 0.52.0)
+    - TOCropViewController (~> 2.8.0)
+    - Yoga
+  - RNImageCropPicker/QBImagePickerController (0.52.0):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-bridging
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-RCTImage
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - TOCropViewController (~> 2.8.0)
+    - Yoga
   - RNNitroSQLite (10.1.0):
     - hermes-engine
     - NitroModules
@@ -1989,6 +2038,7 @@ PODS:
     - Yoga
   - SocketRocket (0.7.1):
     - ReactNativeDependencies
+  - TOCropViewController (2.8.0)
   - Yoga (0.0.0):
     - React-Core-prebuilt
 
@@ -2085,6 +2135,7 @@ DEPENDENCIES:
   - "ReactNativeFs (from `../node_modules/@dr.pogodin/react-native-fs`)"
   - RecaptchaInterop
   - "RNGoogleSignin (from `../node_modules/@react-native-google-signin/google-signin`)"
+  - RNImageCropPicker (from `../node_modules/react-native-image-crop-picker`)
   - RNNitroSQLite (from `../node_modules/react-native-nitro-sqlite`)
   - RNScreens (from `../node_modules/react-native-screens`)
   - RNShare (from `../node_modules/react-native-share`)
@@ -2103,6 +2154,7 @@ SPEC REPOS:
     - PromisesObjC
     - PromisesSwift
     - RecaptchaInterop
+    - TOCropViewController
 
 EXTERNAL SOURCES:
   boost:
@@ -2284,6 +2336,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@dr.pogodin/react-native-fs"
   RNGoogleSignin:
     :path: "../node_modules/@react-native-google-signin/google-signin"
+  RNImageCropPicker:
+    :path: "../node_modules/react-native-image-crop-picker"
   RNNitroSQLite:
     :path: "../node_modules/react-native-nitro-sqlite"
   RNScreens:
@@ -2396,11 +2450,13 @@ SPEC CHECKSUMS:
   ReactNativeFs: 0310452a59bd4f0ab505d23a492e1c74e4af082c
   RecaptchaInterop: 11e0b637842dfb48308d242afc3f448062325aba
   RNGoogleSignin: f98d6e730364a34b6551f2cbb7749c4d84ec7ab1
+  RNImageCropPicker: fabc46228f3c4b75767bdedc4cb0a8bdb0c4048b
   RNNitroSQLite: 905b8a3902e574688a10a6df5c4691e690db3ee8
   RNScreens: 537bf8e0197f2831adcb2b87c15f6dc097799f0f
   RNShare: 17b29dee409f837fad3971a41e6fed5c929e1dab
   RNSVG: 6c9bcbf53822153be6f6c1484f6b0b57c0040d21
   SocketRocket: 37aec555668fb852ec12e3c0de59a86ca58f0871
+  TOCropViewController: 797deaf39c90e6e9ddd848d88817f6b9a8a09888
   Yoga: d1c536142c5ff8ec8cd856ab2a7c227a1d875c8e
 
 PODFILE CHECKSUM: a6f4d4f965b5f0877b95d739a375bbe06a9c74d4
