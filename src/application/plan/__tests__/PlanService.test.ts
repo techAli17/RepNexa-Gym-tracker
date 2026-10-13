@@ -113,3 +113,43 @@ describe('weekly plan in backups', () => {
     });
   });
 });
+
+describe('weekly stats follow the plan’s first day', () => {
+  async function workoutAt(ctx: Awaited<ReturnType<typeof createTestServices>>, at: number) {
+    ctx.clock.t = at;
+    let d = await ctx.services.workouts.startEmpty('kg');
+    d = await ctx.services.workouts.addExercise(d.workout.id, BENCH, 'kg');
+    const set = d.exercises[0].sets[0];
+    await ctx.services.workouts.updateSet(set.id, { weightValue: 50, reps: 5 });
+    await ctx.services.workouts.setCompleted(set.id, true);
+    ctx.clock.advance(3_600_000);
+    await ctx.services.workouts.complete(d.workout.id);
+  }
+
+  it('counts this week from the chosen day on Home', async () => {
+    const ctx = await createTestServices();
+    await ctx.services.plan.setWeekStart(0); // Sunday
+    await workoutAt(ctx, new Date(2026, 9, 10, 10).getTime()); // Saturday: last week
+    await workoutAt(ctx, new Date(2026, 9, 11, 10).getTime()); // Sunday: this week
+    ctx.clock.t = new Date(2026, 9, 13, 12).getTime(); // Tuesday
+    const week = await ctx.services.history.thisWeek();
+    expect(week.firstDay).toBe(0);
+    expect(new Date(week.weekStart).getDay()).toBe(0);
+    expect(week.workouts).toBe(1);
+    expect(week.activeDays).toEqual([0]);
+
+    // With the default Monday start, both fall in the previous week.
+    await ctx.services.plan.setWeekStart(1);
+    expect((await ctx.services.history.thisWeek()).workouts).toBe(0);
+  });
+
+  it('aligns Progress buckets to the chosen day', async () => {
+    const ctx = await createTestServices();
+    await ctx.services.plan.setWeekStart(6); // Saturday
+    await workoutAt(ctx, new Date(2026, 9, 10, 10).getTime()); // Saturday 10 Oct
+    ctx.clock.t = new Date(2026, 9, 13, 12).getTime();
+    const weeks = await ctx.services.analytics.weekly(3);
+    expect(weeks.every(w => new Date(w.weekStart).getDay() === 6)).toBe(true);
+    expect(weeks[2].workouts).toBe(1);
+  });
+});

@@ -34,23 +34,18 @@ import type { Theme } from '../../theme/tokens';
 import { formatDate, formatDuration, formatVolume } from '../../utils/format';
 import { useStartRoutine } from '../routines/RoutinesScreen';
 import type { WeekPlanView } from '../../application/plan/PlanService';
-import { WEEKDAY_SHORT } from '../../domain/models';
-import { GymPhotoStore } from '../../infrastructure/gym-photo/GymPhotoStore';
+import { orderedWeek, type Weekday } from '../../domain/models';
+import { GymPhotoStore } from '../../infrastructure/photos/PhotoStore';
+import { useT, type TKey } from '../../i18n';
+import { weekdayName, weekdayShort } from '../../i18n/labels';
 
-const DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-const DAY_NAMES = [
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-  'Sunday',
-];
-
-function greeting(): string {
+function greeting(t: (key: TKey) => string): string {
   const h = new Date().getHours();
-  return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  return h < 12
+    ? t('home.goodMorning')
+    : h < 17
+    ? t('home.goodAfternoon')
+    : t('home.goodEvening');
 }
 
 /** The routine after the one used most recently, so a rotation (push/pull/legs) suggests itself. */
@@ -70,6 +65,7 @@ export function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
   const active = useActiveWorkout(s => s.detail);
   const unit = useSettings(s => s.settings.weightUnit);
   const s = useStyles(styles);
+  const { t } = useT();
   const startRoutine = useStartRoutine(navigation);
   const [recent, setRecent] = useState<WorkoutListItem[]>([]);
   const [week, setWeek] = useState<WeekSummary | null>(null);
@@ -123,7 +119,9 @@ export function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
     }
   };
 
-  const todayIndex = (new Date().getDay() + 6) % 7;
+  const todayWeekday = new Date().getDay();
+  // The week row follows the start day chosen in the weekly plan.
+  const weekOrder = orderedWeek((week?.firstDay ?? 1) as Weekday);
   const today = plan?.days.find(d => d.isToday) ?? null;
   const planned = !!plan && plan.days.some(d => d.kind !== 'unplanned');
   // A planned training day wins; on unplanned days the routine rotation suggests one.
@@ -155,7 +153,9 @@ export function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
           style={s.gym}
           onPress={() => navigation.navigate('GymProfile')}
           accessibilityRole="button"
-          accessibilityLabel={`${gymName ?? 'My gym'}. Edit gym photo and name`}
+          accessibilityLabel={t('home.gymA11y', {
+            name: gymName ?? t('home.myGym'),
+          })}
         >
           {gymPhoto ? (
             <ImageBackground
@@ -165,7 +165,7 @@ export function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
             >
               <View style={s.gymShade}>
                 <AppText style={s.gymName} numberOfLines={1}>
-                  {gymName ?? 'My gym'}
+                  {gymName ?? t('home.myGym')}
                 </AppText>
               </View>
             </ImageBackground>
@@ -179,7 +179,7 @@ export function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
           )}
         </Pressable>
       ) : null}
-      <AppText color="ink2">{greeting()}</AppText>
+      <AppText color="ink2">{greeting(t)}</AppText>
       <View style={s.mtSm}>
         <BackupStatus onPress={() => navigation.navigate('Backup')} />
       </View>
@@ -189,14 +189,16 @@ export function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
           style={s.hero}
           onPress={() => navigation.navigate('Workout')}
           accessibilityRole="button"
-          accessibilityLabel={`Resume ${active.workout.name}`}
-          accessibilityHint="Opens the workout in progress"
+          accessibilityLabel={t('home.resumeA11y', {
+            name: active.workout.name,
+          })}
+          accessibilityHint={t('home.resumeHint')}
         >
           <View style={s.flex}>
             <AppText variant="caption" style={s.onAmberDim}>
               {active.workout.pausedAt
-                ? 'Paused workout'
-                : 'Workout in progress'}
+                ? t('home.pausedWorkout')
+                : t('home.workoutInProgress')}
             </AppText>
             <AppText style={s.heroTitle} numberOfLines={1}>
               {active.workout.name}
@@ -205,7 +207,7 @@ export function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
           </View>
           <View style={s.heroGo}>
             <AppText variant="label" style={s.heroGoText}>
-              Resume
+              {t('home.resume')}
             </AppText>
           </View>
         </Pressable>
@@ -214,14 +216,21 @@ export function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
           style={s.hero}
           onPress={() => void startRoutine(next.routine.id)}
           accessibilityRole="button"
-          accessibilityLabel={`${
-            today?.kind === 'training' ? `Today, ${today.name}` : 'Next up'
-          }: ${next.routine.name}, ${next.exerciseNames.length} exercises`}
-          accessibilityHint="Starts this routine"
+          accessibilityLabel={t('home.nextA11y', {
+            label:
+              today?.kind === 'training'
+                ? t('home.todayA11y', { day: weekdayName(today.weekday, t) })
+                : t('home.nextUp'),
+            routine: next.routine.name,
+            count: next.exerciseNames.length,
+          })}
+          accessibilityHint={t('home.startHint')}
         >
           <View style={s.flex}>
             <AppText variant="caption" style={s.onAmberDim}>
-              {today?.kind === 'training' ? `Today · ${today.name}` : 'Next up'}
+              {today?.kind === 'training'
+                ? t('home.todayDay', { day: weekdayName(today.weekday, t) })
+                : t('home.nextUp')}
             </AppText>
             <AppText style={s.heroTitle} numberOfLines={1}>
               {next.routine.name}
@@ -236,7 +245,7 @@ export function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
           <View style={s.heroGo}>
             <Icon name="play" size={16} color={s.heroGoText.color as string} />
             <AppText variant="label" style={s.heroGoText}>
-              Start
+              {t('home.start')}
             </AppText>
           </View>
         </Pressable>
@@ -244,15 +253,15 @@ export function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
         <View
           style={s.rest}
           accessible
-          accessibilityLabel={`Today, ${today.name}: rest day`}
+          accessibilityLabel={t('home.restA11y', {
+            day: weekdayName(today.weekday, t),
+          })}
         >
           <AppText variant="caption" color="good">
-            Today · {today.name}
+            {t('home.todayDay', { day: weekdayName(today.weekday, t) })}
           </AppText>
-          <AppText style={s.restTitle}>Rest day</AppText>
-          <AppText color="ink2">
-            Recovery is part of training. You can still log a workout below.
-          </AppText>
+          <AppText style={s.restTitle}>{t('home.restDay')}</AppText>
+          <AppText color="ink2">{t('home.restMessage')}</AppText>
         </View>
       ) : null}
 
@@ -263,19 +272,21 @@ export function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
           accessibilityRole="button"
           accessibilityLabel={
             planned
-              ? `Weekly plan: ${plan.days
-                  .map(
-                    d =>
-                      `${d.name} ${
-                        d.kind === 'training'
-                          ? d.routine!.routine.name
-                          : d.kind === 'rest'
-                          ? 'rest'
-                          : 'not planned'
-                      }`,
-                  )
-                  .join(', ')}`
-              : 'Plan your week'
+              ? t('home.planA11y', {
+                  days: plan.days
+                    .map(
+                      d =>
+                        `${weekdayName(d.weekday, t)} ${
+                          d.kind === 'training'
+                            ? d.routine!.routine.name
+                            : d.kind === 'rest'
+                            ? t('home.planRest')
+                            : t('home.planNotPlanned')
+                        }`,
+                    )
+                    .join(', '),
+                })
+              : t('home.planYourWeek')
           }
         >
           {planned ? (
@@ -290,7 +301,7 @@ export function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
                   color={d.isToday ? 'accent' : 'ink3'}
                   style={s.planDayName}
                 >
-                  {WEEKDAY_SHORT[d.weekday]}
+                  {weekdayShort(d.weekday, t)}
                 </AppText>
                 <View
                   style={[
@@ -305,7 +316,11 @@ export function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
                       d.kind === 'training' && s.planDotTextOn,
                     ]}
                   >
-                    {d.kind === 'rest' ? 'R' : d.kind === 'training' ? '•' : ''}
+                    {d.kind === 'rest'
+                      ? t('home.restMark')
+                      : d.kind === 'training'
+                      ? '•'
+                      : ''}
                   </AppText>
                 </View>
               </View>
@@ -314,9 +329,9 @@ export function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
             <View style={s.planEmpty}>
               <Icon name="timer" size={20} tint="accent" />
               <View style={s.flex}>
-                <AppText variant="label">Plan your week</AppText>
+                <AppText variant="label">{t('home.planYourWeek')}</AppText>
                 <AppText variant="caption" color="ink3">
-                  Choose training and rest days, and what to train each day.
+                  {t('home.planYourWeekHint')}
                 </AppText>
               </View>
               <Icon name="chevronRight" size={18} tint="ink3" />
@@ -327,7 +342,7 @@ export function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
 
       {!active ? (
         <Button
-          label="+ Start empty workout"
+          label={t('home.startEmpty')}
           variant={next ? 'ghost' : 'primary'}
           onPress={() => void startEmpty()}
           busy={starting}
@@ -337,29 +352,37 @@ export function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
 
       <Card style={s.mt}>
         <View style={s.cardHead}>
-          <AppText variant="heading">This week</AppText>
+          <AppText variant="heading">{t('home.thisWeek')}</AppText>
           {streak ? (
             <AppText variant="caption" color="accent" style={s.bold}>
-              {streak}-week streak
+              {t('home.streak', { count: streak })}
             </AppText>
           ) : null}
         </View>
         <View
           style={s.days}
           accessible
-          accessibilityLabel={`Trained on ${
-            week?.activeDays.map(d => DAY_NAMES[d]).join(', ') || 'no days yet'
-          } this week`}
+          accessibilityLabel={t('home.trainedOnA11y', {
+            days:
+              weekOrder
+                .filter(d => week?.activeDays.includes(d))
+                .map(d => weekdayName(d, t))
+                .join(', ') || t('home.noDaysYet'),
+          })}
         >
-          {DAYS.map((d, i) => {
-            const on = week?.activeDays.includes(i);
+          {weekOrder.map(d => {
+            const on = week?.activeDays.includes(d);
             return (
-              <View key={i} style={s.day}>
+              <View key={d} style={s.day}>
                 <AppText variant="caption" color="ink3">
-                  {d}
+                  {weekdayName(d, t).charAt(0)}
                 </AppText>
                 <View
-                  style={[s.dot, on && s.dotOn, i === todayIndex && s.dotToday]}
+                  style={[
+                    s.dot,
+                    on && s.dotOn,
+                    d === todayWeekday && s.dotToday,
+                  ]}
                 >
                   {on ? <Icon name="check" size={16} tint="bg" /> : null}
                 </View>
@@ -368,15 +391,18 @@ export function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
           })}
         </View>
         <View style={s.stats}>
-          <Stat value={String(week?.workouts ?? 0)} label="Workouts" />
+          <Stat
+            value={String(week?.workouts ?? 0)}
+            label={t('home.workouts')}
+          />
           <Stat
             value={formatDuration(week?.durationMs ?? 0)}
-            label="Time"
+            label={t('home.time')}
             divider
           />
           <Stat
             value={formatVolume(week?.volumeKg ?? 0, unit)}
-            label={`Volume, ${unit}`}
+            label={t('home.volumeUnit', { unit })}
             divider
           />
         </View>
@@ -385,9 +411,9 @@ export function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
       {weeks.some(w => w.volumeKg > 0) ? (
         <Card style={s.mt}>
           <View style={s.cardHead}>
-            <AppText variant="heading">Weekly volume</AppText>
+            <AppText variant="heading">{t('home.weeklyVolume')}</AppText>
             <AppText variant="caption" color="ink3">
-              Last 8 weeks, {unit}
+              {t('home.last8Weeks', { unit })}
             </AppText>
           </View>
           <BarChart
@@ -396,28 +422,30 @@ export function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
               label: df(w.weekStart),
             }))}
             formatValue={v => formatVolume(v, 'kg')}
-            accessibilityLabel={`Weekly volume: ${weeks
-              .map(
-                w =>
-                  `week of ${df(w.weekStart)} ${formatVolume(
-                    w.volumeKg,
+            accessibilityLabel={t('home.volumeA11y', {
+              weeks: weeks
+                .map(w =>
+                  t('home.weekOfA11y', {
+                    date: df(w.weekStart),
+                    volume: formatVolume(w.volumeKg, unit),
                     unit,
-                  )} ${unit}`,
-              )
-              .join(', ')}`}
+                  }),
+                )
+                .join(', '),
+            })}
           />
         </Card>
       ) : null}
 
       <View style={s.sectionRow}>
-        <AppText variant="heading">Routines</AppText>
+        <AppText variant="heading">{t('home.routines')}</AppText>
         <Pressable
           onPress={() => navigation.navigate('Routines')}
           accessibilityRole="button"
           hitSlop={10}
         >
           <AppText variant="label" color="accent">
-            {routines.length ? 'Manage' : 'Add routines'}
+            {routines.length ? t('home.manage') : t('home.addRoutines')}
           </AppText>
         </Pressable>
       </View>
@@ -442,7 +470,7 @@ export function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
                 {r.exerciseNames.join(', ')}
               </AppText>
               <Button
-                label="Start"
+                label={t('home.start')}
                 variant="outline"
                 compact
                 onPress={() => void startRoutine(r.routine.id)}
@@ -451,14 +479,11 @@ export function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
           ))}
         </ScrollView>
       ) : (
-        <AppText color="ink2">
-          Save your regular workouts as routines, or start from push / pull /
-          legs templates.
-        </AppText>
+        <AppText color="ink2">{t('home.routinesEmpty')}</AppText>
       )}
 
       <View style={s.sectionRow}>
-        <AppText variant="heading">Recent workouts</AppText>
+        <AppText variant="heading">{t('home.recentWorkouts')}</AppText>
         {recent.length ? (
           <Pressable
             onPress={() => navigation.navigate('History')}
@@ -466,7 +491,7 @@ export function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
             hitSlop={10}
           >
             <AppText variant="label" color="accent">
-              See all
+              {t('home.seeAll')}
             </AppText>
           </Pressable>
         ) : null}
@@ -483,9 +508,7 @@ export function HomeScreen({ navigation }: TabScreenProps<'Home'>) {
             />
           ))
       ) : (
-        <AppText color="ink2">
-          Your finished workouts will show up here.
-        </AppText>
+        <AppText color="ink2">{t('home.recentEmpty')}</AppText>
       )}
     </ScrollView>
   );

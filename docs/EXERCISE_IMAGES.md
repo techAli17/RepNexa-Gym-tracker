@@ -1,6 +1,6 @@
 # Exercise images: licence review
 
-Status: **not shipped.** The app shows an equipment icon and "Illustration coming soon" for every exercise. No third-party image is bundled.
+Status: **not shipped.** No third-party image is bundled. Each exercise shows an original front/back muscle map (`components/exercise/MuscleMap.tsx`) drawn from its listed muscles, and users can add their own photo.
 
 ## free-exercise-db (yuhonas/free-exercise-db)
 

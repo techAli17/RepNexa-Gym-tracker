@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
+import { useT } from '../../i18n';
 import { useStyles, useTheme } from '../../theme/ThemeProvider';
 import type { Theme } from '../../theme/tokens';
 import { Button } from './Button';
@@ -13,7 +14,7 @@ export function TextPrompt({
   placeholder,
   multiline,
   maxLength = 80,
-  confirmLabel = 'Save',
+  confirmLabel,
   onCancel,
   onSubmit,
 }: {
@@ -29,6 +30,7 @@ export function TextPrompt({
 }) {
   const s = useStyles(styles);
   const t = useTheme();
+  const { t: tr } = useT();
   const [value, setValue] = useState(initial);
   useEffect(() => {
     if (visible) setValue(initial);
@@ -50,8 +52,8 @@ export function TextPrompt({
         style={[s.input, multiline && s.multi]}
       />
       <View style={s.actions}>
-        <Button label={confirmLabel} variant="ink" onPress={() => onSubmit(value)} />
-        <Button label="Cancel" variant="outline" onPress={onCancel} />
+        <Button label={confirmLabel ?? tr('common.save')} variant="ink" onPress={() => onSubmit(value)} />
+        <Button label={tr('common.cancel')} variant="outline" onPress={onCancel} />
       </View>
     </Sheet>
   );

@@ -1,0 +1,70 @@
+/** History list, workout detail and the Drive-only history. */
+export const history = {
+  range: {
+    all: 'All time',
+    '30': '30 days',
+    '90': '90 days',
+    year: 'This year',
+  },
+  filterByExercise: 'Filter by exercise',
+  filteredBy: 'Filtered by {name}. Clear filter',
+  olderInDrive: 'Older workouts in your Drive ({count})',
+  olderInDriveHint: 'Shows workouts kept only in your Drive backup',
+  noMatchTitle: 'No workouts match',
+  noMatchMessage: 'Try a wider date range or another exercise.',
+  emptyTitle: 'No workouts yet',
+  emptyMessage: 'Your finished workouts will show up here.',
+  goHome: 'Go to Home',
+  workoutCount: { one: '{count} workout', other: '{count} workouts' },
+  pickerEmpty: 'Exercises you have logged will appear here.',
+  reps: '{reps} reps',
+  seconds: '{s} s',
+  detail: {
+    same: 'same',
+    removeExerciseTitle: 'Remove {name} from this workout?',
+    removeExerciseMessage:
+      'Its sets are deleted and your records are recalculated.',
+    notFoundTitle: 'Workout not found',
+    notFoundMessage: 'It may have been deleted.',
+    deleteTitle: 'Delete this workout?',
+    deleteMessage:
+      'It will be removed from this phone, and from your backup the next time it updates.',
+    deleted: 'Workout deleted',
+    savedAsRoutine: 'Saved as a routine',
+    duration: 'Duration',
+    volumeUnit: 'Volume, {unit}',
+    sets: 'Sets',
+    rename: 'Rename workout',
+    editHint:
+      'Changes save as you go. Records are recalculated after each change.',
+    addExercise: '+ Add exercise',
+    addExerciseHint:
+      'Fill in a new exercise’s set and tick it. Unticked sets are removed when you tap Done.',
+    comparedWith: 'Compared with {date}: volume {volume}',
+    comparedE1rm: ', estimated 1-rep max {e1rm}',
+    versus: 'vs {date}:',
+    volume: 'volume',
+    estE1rm: 'est. 1RM',
+    firstTime: 'First time logged',
+    saveAsRoutine: 'Save as routine',
+    deleteWorkout: 'Delete workout',
+    workoutName: 'Workout name',
+  },
+  drive: {
+    reading: 'Reading your Drive backup…',
+    connect: 'Connect Google Drive to see workouts kept only in your backup.',
+    readFailed:
+      'Your Drive backup could not be read right now. Check your connection and try again.',
+    unavailableTitle: 'Drive history unavailable',
+    backupSettings: 'Backup settings',
+    nothingTitle: 'Nothing extra in Drive',
+    nothingMessage: 'Every workout in your Drive backup is also on this phone.',
+    note: {
+      one: '{count} workout is kept only in your Drive. They are read-only here and stay off this phone.',
+      other:
+        '{count} workouts are kept only in your Drive. They are read-only here and stay off this phone.',
+    },
+    rowSummary: '{duration} · {volume} {unit} · {sets} sets',
+    exercise: 'Exercise',
+  },
+};

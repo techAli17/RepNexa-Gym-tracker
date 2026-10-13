@@ -49,6 +49,29 @@ describe('custom exercises', () => {
   });
 });
 
+describe('exercise photos', () => {
+  it('sets, replaces and clears a photo on any exercise without touching backups', async () => {
+    const { services, repos } = await createTestServices();
+    const builtIn = BUILT_IN_EXERCISES[0].id;
+    expect(await services.exercises.photo(builtIn)).toBeNull();
+    expect(await services.exercises.setPhoto(builtIn, 'exercise-1.jpg')).toBeNull();
+    expect(await services.exercises.setPhoto(builtIn, 'exercise-2.jpg')).toBe('exercise-1.jpg');
+    expect(await services.exercises.photo(builtIn)).toBe('exercise-2.jpg');
+    expect(await services.exercises.photos()).toEqual(new Map([[builtIn, 'exercise-2.jpg']]));
+    expect(await services.exercises.setPhoto(builtIn, 'exercise-2.jpg')).toBeNull();
+    expect(await services.exercises.setPhoto(builtIn, null)).toBe('exercise-2.jpg');
+    expect(await services.exercises.photo(builtIn)).toBeNull();
+    expect((await repos.backupState.get()).localRevision).toBe(0);
+  });
+
+  it('rejects an unknown exercise', async () => {
+    const { services } = await createTestServices();
+    await expect(services.exercises.setPhoto('00000000-0000-4000-8000-000000000000', 'exercise-1.jpg')).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
+  });
+});
+
 describe('filterExercises', () => {
   it('matches every word across name, equipment and muscles, ignoring case', () => {
     const names = (q: string, g?: 'legs') =>

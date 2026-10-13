@@ -1,18 +1,19 @@
 import React, { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { useActiveWorkoutStore, useServices } from '../../app/AppContext';
+import { useActiveWorkoutStore, useServices, useSettings } from '../../app/AppContext';
 import type { PickerMode, RootScreenProps, TabScreenProps } from '../../app/navigation/types';
 import { filterExercises } from '../../application/exercises/ExerciseService';
 import { AppText } from '../../components/common/AppText';
 import { Chip } from '../../components/common/Chip';
 import { EmptyState } from '../../components/common/EmptyState';
 import { Icon, iconForEquipment } from '../../components/common/Icon';
+import { useT } from '../../i18n';
+import { muscleGroupLabel, equipmentLabel } from '../../i18n/labels';
 import { MUSCLE_GROUPS, type Exercise, type MuscleGroup } from '../../domain/models';
 import { toast, toastError } from '../../store/toastStore';
 import { useStyles, useTheme } from '../../theme/ThemeProvider';
 import type { Theme } from '../../theme/tokens';
-import { titleCase } from '../../utils/text';
 
 export const ExerciseItem = React.memo(function ExerciseItemRow({
   e,
@@ -24,6 +25,7 @@ export const ExerciseItem = React.memo(function ExerciseItemRow({
   hint: string;
 }) {
   const s = useStyles(styles);
+  const { t } = useT();
   return (
     <Pressable style={({ pressed }) => [s.row, pressed && s.pressed]} onPress={() => onPress(e)} accessibilityRole="button" accessibilityHint={hint}>
       <View style={s.thumb}>
@@ -34,8 +36,8 @@ export const ExerciseItem = React.memo(function ExerciseItemRow({
           {e.name}
         </AppText>
         <AppText variant="caption" color="ink3">
-          {titleCase(e.muscleGroup)} · {titleCase(e.equipment)}
-          {e.isCustom ? ' · Custom' : ''}
+          {muscleGroupLabel(e.muscleGroup, t)} · {equipmentLabel(e.equipment, t)}
+          {e.isCustom ? ` · ${t('exercises.custom')}` : ''}
         </AppText>
       </View>
       <Icon name="chevronRight" size={18} tint="ink3" />
@@ -59,7 +61,8 @@ function ExerciseList({
 }) {
   const services = useServices();
   const s = useStyles(styles);
-  const t = useTheme();
+  const theme = useTheme();
+  const { t, tn } = useT();
   const [all, setAll] = useState<Exercise[]>([]);
   const [query, setQuery] = useState('');
   const [group, setGroup] = useState<MuscleGroup | 'all'>('all');
@@ -98,9 +101,9 @@ function ExerciseList({
             <TextInput
               value={query}
               onChangeText={setQuery}
-              placeholder="Search exercises"
-              placeholderTextColor={t.colors.ink3}
-              accessibilityLabel="Search exercises"
+              placeholder={t('exercises.search')}
+              placeholderTextColor={theme.colors.ink3}
+              accessibilityLabel={t('exercises.search')}
               autoCorrect={false}
               clearButtonMode="while-editing"
               returnKeyType="search"
@@ -108,41 +111,41 @@ function ExerciseList({
             />
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chips} keyboardShouldPersistTaps="handled">
-            <Chip label="All" selected={group === 'all'} onPress={() => setGroup('all')} />
+            <Chip label={t('exercises.all')} selected={group === 'all'} onPress={() => setGroup('all')} />
             {MUSCLE_GROUPS.map(g => (
-              <Chip key={g} label={titleCase(g)} selected={group === g} onPress={() => setGroup(g)} />
+              <Chip key={g} label={muscleGroupLabel(g, t)} selected={group === g} onPress={() => setGroup(g)} />
             ))}
           </ScrollView>
           <Pressable style={s.create} onPress={onCreate} accessibilityRole="button">
             <Icon name="plus" size={18} tint="ink2" />
             <AppText variant="label" color="ink2">
-              Create exercise
+              {t('exercises.create')}
             </AppText>
           </Pressable>
           {showSuggestions ? (
             <View>
               <AppText variant="label" color="ink3" style={s.count}>
-                Suggested substitutes
+                {t('exercises.suggested')}
               </AppText>
               {suggestions!.map(e => (
                 <ExerciseItem key={e.id} e={e} onPress={onSelect} hint={hint} />
               ))}
               <AppText variant="label" color="ink3" style={s.count}>
-                All exercises
+                {t('exercises.allExercises')}
               </AppText>
             </View>
           ) : (
             <AppText variant="caption" color="ink3" style={s.count}>
-              {list.length} {list.length === 1 ? 'exercise' : 'exercises'}
+              {tn('exercises.count', list.length)}
             </AppText>
           )}
         </View>
       }
       ListEmptyComponent={
         <EmptyState
-          title="No matches"
-          message={query ? `Nothing matches “${query}”. Try another name, or create your own exercise.` : 'No exercises in this group yet.'}
-          actionLabel="Create exercise"
+          title={t('exercises.noMatches')}
+          message={query ? t('exercises.noMatchQuery', { query }) : t('exercises.noneInGroup')}
+          actionLabel={t('exercises.create')}
           onAction={onCreate}
         />
       }
@@ -151,8 +154,9 @@ function ExerciseList({
 }
 
 export function ExerciseLibraryScreen({ navigation }: TabScreenProps<'Exercises'>) {
+  const { t } = useT();
   const onSelect = useCallback((e: Exercise) => navigation.navigate('ExerciseDetail', { id: e.id }), [navigation]);
-  return <ExerciseList onSelect={onSelect} onCreate={() => navigation.navigate('ExerciseForm', {})} hint="Shows details" />;
+  return <ExerciseList onSelect={onSelect} onCreate={() => navigation.navigate('ExerciseForm', {})} hint={t('exercises.hintDetails')} />;
 }
 
 /**
@@ -163,14 +167,19 @@ export function ExercisePickerScreen({ navigation, route }: RootScreenProps<'Exe
   const params = route.params;
   const store = useActiveWorkoutStore();
   const services = useServices();
+  const unit = useSettings(x => x.settings.weightUnit);
+  const settingsUnit = () => unit;
   const busy = useRef(false);
   const [suggestions, setSuggestions] = useState<Exercise[] | undefined>();
   const replacing = params.mode === 'replace' ? params : null;
+  const { t } = useT();
 
   useEffect(() => {
-    navigation.setOptions({ title: replacing ? 'Replace exercise' : params.mode === 'routine' ? 'Add to routine' : 'Add exercise' });
+    navigation.setOptions({
+      title: replacing ? t('exercises.titleReplace') : params.mode === 'routine' ? t('exercises.titleRoutine') : t('exercises.titleAdd'),
+    });
     if (replacing) services.exercises.similar(replacing.exerciseId).then(setSuggestions, toastError);
-  }, [navigation, params.mode, replacing, services]);
+  }, [navigation, params.mode, replacing, services, t]);
 
   const onSelect = useCallback(
     async (e: Exercise) => {
@@ -194,12 +203,18 @@ export function ExercisePickerScreen({ navigation, route }: RootScreenProps<'Exe
       navigation.popTo('RoutineEditor', { addExerciseId: e.id, addNonce: Date.now() }, { merge: true });
       return;
     }
+    if (p.mode === 'history') {
+      await services.workouts.addExercise(p.workoutId, e.id, settingsUnit());
+      toast(t('exercises.addedFillIn', { name: e.name }));
+      navigation.goBack();
+      return;
+    }
     if (p.mode === 'replace') {
       await a.replaceExercise(p.workoutExerciseId, e.id);
-      toast(`Replaced with ${e.name}`);
+      toast(t('exercises.replacedWith', { name: e.name }));
     } else {
       await a.addExercise(e.id);
-      toast(`${e.name} added`);
+      toast(t('exercises.added', { name: e.name }));
     }
     navigation.goBack();
   }
@@ -208,7 +223,7 @@ export function ExercisePickerScreen({ navigation, route }: RootScreenProps<'Exe
     <ExerciseList
       onSelect={onSelect}
       onCreate={() => navigation.navigate('ExerciseForm', { pickFor: params })}
-      hint={replacing ? 'Replaces the exercise' : params.mode === 'routine' ? 'Adds it to the routine' : 'Adds it to your workout'}
+      hint={replacing ? t('exercises.hintReplace') : params.mode === 'routine' ? t('exercises.hintRoutine') : t('exercises.hintWorkout')}
       suggestions={suggestions}
       excludeId={replacing?.exerciseId}
     />

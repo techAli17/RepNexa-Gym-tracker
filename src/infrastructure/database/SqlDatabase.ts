@@ -1,3 +1,5 @@
+import { rethrowStorageFull } from '../storageErrors';
+
 export type SqlValue = string | number | boolean | null | undefined;
 export type SqlRow = Record<string, unknown>;
 
@@ -39,11 +41,11 @@ export interface NitroLikeConnection extends NitroExecutor {
 function wrapExecutor(ex: NitroExecutor): SqlExecutor {
   return {
     async query<R extends SqlRow>(sql: string, params?: readonly SqlValue[]) {
-      const res = await ex.executeAsync(sql, params ? [...params] : undefined);
+      const res = await ex.executeAsync(sql, params ? [...params] : undefined).catch(rethrowStorageFull);
       return (res.rows?._array ?? (res.results as unknown[]) ?? []) as R[];
     },
     async run(sql: string, params?: readonly SqlValue[]) {
-      const res = await ex.executeAsync(sql, params ? [...params] : undefined);
+      const res = await ex.executeAsync(sql, params ? [...params] : undefined).catch(rethrowStorageFull);
       return { rowsAffected: res.rowsAffected ?? 0 };
     },
   };
@@ -52,7 +54,8 @@ function wrapExecutor(ex: NitroExecutor): SqlExecutor {
 export function createSqlDatabase(conn: NitroLikeConnection): SqlDatabase {
   return {
     ...wrapExecutor(conn),
-    transaction: fn => conn.transaction(tx => fn(wrapExecutor(tx))),
+    // A commit can also hit a full disk; the transaction rolls back and nothing partial is kept.
+    transaction: fn => conn.transaction(tx => fn(wrapExecutor(tx))).catch(rethrowStorageFull),
     close: () => conn.close(),
     destroy: () => conn.delete(),
   };

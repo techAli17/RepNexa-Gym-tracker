@@ -10,6 +10,7 @@ import { EmptyState } from '../../components/common/EmptyState';
 import { Icon } from '../../components/common/Icon';
 import { ROUTINE_TEMPLATES } from '../../data/routines/templates';
 import type { RoutineTemplate } from '../../domain/models';
+import { useT } from '../../i18n';
 import { toast, toastError } from '../../store/toastStore';
 import { useStyles } from '../../theme/ThemeProvider';
 import type { Theme } from '../../theme/tokens';
@@ -18,12 +19,13 @@ import type { Theme } from '../../theme/tokens';
 export function useStartRoutine(navigation: { navigate(screen: 'Workout'): void }) {
   const store = useActiveWorkoutStore();
   const active = useActiveWorkout(x => x.detail);
+  const { t } = useT();
   return useCallback(
     async (routineId: string) => {
       if (active) {
-        Alert.alert('A workout is in progress', 'Finish or discard it before starting another.', [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Resume it', onPress: () => navigation.navigate('Workout') },
+        Alert.alert(t('routines.inProgressTitle'), t('routines.inProgressMessage'), [
+          { text: t('common.cancel'), style: 'cancel' },
+          { text: t('routines.resumeIt'), onPress: () => navigation.navigate('Workout') },
         ]);
         return;
       }
@@ -34,13 +36,14 @@ export function useStartRoutine(navigation: { navigate(screen: 'Workout'): void 
         toastError(e);
       }
     },
-    [active, store, navigation],
+    [active, store, navigation, t],
   );
 }
 
 export function RoutinesScreen({ navigation }: RootScreenProps<'Routines'>) {
   const services = useServices();
   const s = useStyles(styles);
+  const { t } = useT();
   const [list, setList] = useState<RoutineSummary[] | null>(null);
   const start = useStartRoutine(navigation);
 
@@ -68,40 +71,52 @@ export function RoutinesScreen({ navigation }: RootScreenProps<'Routines'>) {
 
   const menu = (r: RoutineSummary, i: number) => {
     const opts: Array<[string, () => void, boolean?]> = [
-      ['Edit', () => navigation.navigate('RoutineEditor', { id: r.routine.id })],
-      ['Duplicate', () => void run(services.routines.duplicate(r.routine.id), 'Routine duplicated')],
-      ['Move up', () => moveBy(i, -1)],
-      ['Move down', () => moveBy(i, 1)],
+      [t('common.edit'), () => navigation.navigate('RoutineEditor', { id: r.routine.id })],
+      [t('routines.duplicate'), () => void run(services.routines.duplicate(r.routine.id), t('routines.duplicated'))],
+      [t('routines.moveUp'), () => moveBy(i, -1)],
+      [t('routines.moveDown'), () => moveBy(i, 1)],
       [
-        'Delete',
+        t('common.delete'),
         () =>
-          Alert.alert(`Delete ${r.routine.name}?`, 'Past workouts started from it are kept.', [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Delete', style: 'destructive', onPress: () => void run(services.routines.remove(r.routine.id), 'Routine deleted') },
+          Alert.alert(t('routines.deleteTitle', { name: r.routine.name }), t('routines.deleteMessage'), [
+            { text: t('common.cancel'), style: 'cancel' },
+            {
+              text: t('common.delete'),
+              style: 'destructive',
+              onPress: () => void run(services.routines.remove(r.routine.id), t('routines.deleted')),
+            },
           ]),
         true,
       ],
     ];
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
-        { options: [...opts.map(o => o[0]), 'Cancel'], cancelButtonIndex: opts.length, destructiveButtonIndex: opts.length - 1, title: r.routine.name },
+        { options: [...opts.map(o => o[0]), t('common.cancel')], cancelButtonIndex: opts.length, destructiveButtonIndex: opts.length - 1, title: r.routine.name },
         idx => opts[idx]?.[1](),
       );
     } else {
       Alert.alert(r.routine.name, undefined, [
         ...opts.slice(0, 2).map(([text, onPress]) => ({ text, onPress })),
-        { text: 'More…', onPress: () => Alert.alert(r.routine.name, undefined, [...opts.slice(2).map(([text, onPress, d]) => ({ text, onPress, style: d ? ('destructive' as const) : undefined })), { text: 'Cancel', style: 'cancel' as const }]) },
+        {
+          text: t('routines.more'),
+          onPress: () =>
+            Alert.alert(r.routine.name, undefined, [
+              ...opts.slice(2).map(([text, onPress, d]) => ({ text, onPress, style: d ? ('destructive' as const) : undefined })),
+              { text: t('common.cancel'), style: 'cancel' as const },
+            ]),
+        },
       ]);
     }
   };
 
-  const addTemplate = (t: RoutineTemplate) => void run(services.routines.createFromTemplate(t), `${t.name} added to your routines`);
+  const addTemplate = (tpl: RoutineTemplate) =>
+    void run(services.routines.createFromTemplate(tpl), t('routines.templateAdded', { name: tpl.name }));
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.body}>
-      <Button label="+ New routine" variant="ink" onPress={() => navigation.navigate('RoutineEditor', {})} />
+      <Button label={t('routines.newRoutine')} variant="ink" onPress={() => navigation.navigate('RoutineEditor', {})} />
       {list && !list.length ? (
-        <EmptyState title="No routines yet" message="Build your own, or start from a template below." />
+        <EmptyState title={t('routines.emptyTitle')} message={t('routines.emptyMessage')} />
       ) : null}
       {list?.map((r, i) => (
         <View key={r.routine.id} style={s.card}>
@@ -109,19 +124,19 @@ export function RoutinesScreen({ navigation }: RootScreenProps<'Routines'>) {
             style={s.cardMain}
             onPress={() => navigation.navigate('RoutineEditor', { id: r.routine.id })}
             accessibilityRole="button"
-            accessibilityHint="Edit routine"
+            accessibilityHint={t('routines.editHint')}
           >
             <AppText variant="heading">{r.routine.name}</AppText>
             <AppText variant="caption" color="ink3" numberOfLines={2}>
               {r.exerciseNames.join(', ')}
             </AppText>
             <AppText variant="caption" color="ink3">
-              {r.exerciseNames.length} exercises · {r.totalSets} sets
+              {t('routines.summary', { exercises: r.exerciseNames.length, sets: r.totalSets })}
             </AppText>
           </Pressable>
           <View style={s.cardActions}>
-            <Button label="Start" compact onPress={() => void start(r.routine.id)} />
-            <Pressable style={s.more} onPress={() => menu(r, i)} accessibilityRole="button" accessibilityLabel={`More options for ${r.routine.name}`}>
+            <Button label={t('routines.start')} compact onPress={() => void start(r.routine.id)} />
+            <Pressable style={s.more} onPress={() => menu(r, i)} accessibilityRole="button" accessibilityLabel={t('routines.moreOptionsA11y', { name: r.routine.name })}>
               <Icon name="more" size={20} tint="ink2" />
             </Pressable>
           </View>
@@ -129,22 +144,22 @@ export function RoutinesScreen({ navigation }: RootScreenProps<'Routines'>) {
       ))}
 
       <AppText variant="heading" style={s.h}>
-        Templates
+        {t('routines.templates')}
       </AppText>
       <AppText variant="caption" color="ink3" style={s.sub}>
-        Add one to your routines, then change it to suit you.
+        {t('routines.templatesSub')}
       </AppText>
-      {ROUTINE_TEMPLATES.map(t => (
-        <View key={t.key} style={s.template}>
+      {ROUTINE_TEMPLATES.map(tpl => (
+        <View key={tpl.key} style={s.template}>
           <View style={s.flex}>
             <AppText variant="label" style={s.tName}>
-              {t.name}
+              {tpl.name}
             </AppText>
             <AppText variant="caption" color="ink3">
-              {t.description} · {t.exercises.length} exercises
+              {t('routines.templateSummary', { description: tpl.description, count: tpl.exercises.length })}
             </AppText>
           </View>
-          <Button label="Add" variant="outline" compact onPress={() => addTemplate(t)} />
+          <Button label={t('routines.add')} variant="outline" compact onPress={() => addTemplate(tpl)} />
         </View>
       ))}
     </ScrollView>

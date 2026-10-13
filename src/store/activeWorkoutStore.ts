@@ -1,4 +1,5 @@
 import { createStore } from 'zustand/vanilla';
+import { animateNextLayout } from '../hooks/useReducedMotion';
 import type { AppServices } from '../application/container';
 import type { WorkoutSummary } from '../application/workouts/WorkoutService';
 import type { AppSettings, RoutineTemplate, Uuid, WorkoutDetail, WorkoutSet } from '../domain/models';
@@ -68,6 +69,8 @@ export function createActiveWorkoutStore(services: AppServices, getSettings: () 
       const previous = missing.length
         ? { ...known, ...(await services.workouts.previousSets(missing, detail?.workout.id)) }
         : known;
+      // Sets and exercises added, removed or reordered slide into place.
+      if (get().detail) animateNextLayout();
       set({ detail, previous, ready: true });
     };
 

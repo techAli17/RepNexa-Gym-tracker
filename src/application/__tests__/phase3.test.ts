@@ -177,6 +177,44 @@ describe('editing finished workouts', () => {
   });
 });
 
+describe('adding exercises to a finished workout', () => {
+  it('adds an unticked set, counts it once ticked, and tidies the rest away', async () => {
+    const ctx = await createTestServices();
+    const { services, repos } = ctx;
+    await doWorkout(ctx, [SQUAT], 100, 5); // gives Back Squat a "last time"
+    const id = await doWorkout(ctx, [BENCH], 80, 5);
+    let d = await services.workouts.addExercise(id, SQUAT, 'kg');
+    const added = d.exercises.find(e => e.exerciseId === SQUAT)!;
+    expect(added.sets).toHaveLength(1);
+    expect(added.sets[0]).toMatchObject({ weightValue: 100, reps: 5, completedAt: null });
+
+    const done = await services.workouts.setCompleted(added.sets[0].id, true);
+    expect(done.completedAt).toBe(d.workout.endedAt); // dated to the workout, not today
+    await expectCode(services.workouts.setCompleted(added.sets[0].id, false), 'VALIDATION');
+    const max = (await repos.records.listForExercises([SQUAT])).find(r => r.recordType === 'max_weight')!;
+    expect(max.value).toBe(100);
+
+    // An exercise added and left empty disappears on tidy.
+    d = await services.workouts.addExercise(id, INCLINE, 'kg');
+    await services.workouts.tidyFinished(id);
+    d = (await services.workouts.getDetail(id))!;
+    expect(d.exercises.map(e => e.exerciseId)).toEqual([BENCH, SQUAT]);
+    expect(d.exercises.flatMap(e => e.sets).every(s => s.completedAt != null)).toBe(true);
+  });
+
+  it('tidy is a no-op for active workouts and clean history', async () => {
+    const ctx = await createTestServices();
+    const id = await doWorkout(ctx, [BENCH], 80, 5);
+    const before = (await ctx.repos.backupState.get()).localRevision;
+    await ctx.services.workouts.tidyFinished(id);
+    expect((await ctx.repos.backupState.get()).localRevision).toBe(before);
+    const active = await ctx.services.workouts.startEmpty('kg');
+    await ctx.services.workouts.addExercise(active.workout.id, BENCH, 'kg');
+    await ctx.services.workouts.tidyFinished(active.workout.id);
+    expect((await ctx.services.workouts.getActiveDetail())!.exercises[0].sets).toHaveLength(3);
+  });
+});
+
 describe('substitution and rest', () => {
   it('replaces an exercise and rebuilds its sets', async () => {
     const ctx = await createTestServices();

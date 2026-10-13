@@ -3,6 +3,7 @@ import { errorCodes, isErrorWithCode, keepLocalCopy, pick, types } from '@react-
 import Share from 'react-native-share';
 import { MAX_BACKUP_BYTES } from '../../domain/backup/format';
 import { DomainError } from '../../domain/errors';
+import { rethrowStorageFull } from '../storageErrors';
 
 const stripScheme = (uri: string) => decodeURIComponent(uri.replace(/^file:\/\//, ''));
 
@@ -13,7 +14,7 @@ const stripScheme = (uri: string) => decodeURIComponent(uri.replace(/^file:\/\//
  */
 export async function shareJsonFile(json: string, fileName: string): Promise<'shared' | 'dismissed'> {
   const path = `${CachesDirectoryPath}/${fileName}`;
-  await writeFile(path, json, 'utf8');
+  await writeFile(path, json, 'utf8').catch(rethrowStorageFull);
   try {
     const r = await Share.open({
       url: `file://${path}`,

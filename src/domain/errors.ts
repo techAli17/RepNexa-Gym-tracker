@@ -5,7 +5,8 @@ export type DomainErrorCode =
   | 'WORKOUT_NOT_ACTIVE'
   | 'NO_COMPLETED_SETS'
   | 'SET_INCOMPLETE'
-  | 'DUPLICATE_NAME';
+  | 'DUPLICATE_NAME'
+  | 'STORAGE_FULL';
 
 /** Expected, user-recoverable failure. Anything else is a bug or an infrastructure fault. */
 export class DomainError extends Error {

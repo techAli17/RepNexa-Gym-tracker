@@ -3,6 +3,7 @@ import { Platform, StyleSheet, TextInput } from 'react-native';
 import { parseNumericInput } from '../../domain/validation';
 import { useStyles, useTheme } from '../../theme/ThemeProvider';
 import type { Theme } from '../../theme/tokens';
+import { useT } from '../../i18n';
 import { inputText } from '../../utils/format';
 
 const COMMIT_DELAY_MS = 450;
@@ -51,7 +52,8 @@ export const NumberField = React.memo(function NumberFieldInput({
   muted,
 }: NumberFieldProps) {
   const s = useStyles(styles);
-  const t = useTheme();
+  const theme = useTheme();
+  const { t } = useT();
   const [text, setText] = useState(() => inputText(value));
   const [bad, setBad] = useState(false);
   const focused = useRef(false);
@@ -118,9 +120,9 @@ export const NumberField = React.memo(function NumberFieldInput({
       inputMode={integer ? 'numeric' : 'decimal'}
       selectTextOnFocus
       placeholder={placeholder}
-      placeholderTextColor={t.colors.ink3}
+      placeholderTextColor={theme.colors.ink3}
       accessibilityLabel={accessibilityLabel}
-      accessibilityHint={bad ? 'Invalid number' : undefined}
+      accessibilityHint={bad ? t('workout.set.invalidNumber') : undefined}
       maxLength={7}
       multiline={ANDROID_NO_HSCROLL}
       numberOfLines={1}

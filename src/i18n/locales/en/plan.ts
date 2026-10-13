@@ -1,0 +1,22 @@
+/** Weekly plan screen. */
+export const plan = {
+  weekStartsOn: 'Week starts on',
+  weekStartsSub: 'Your plan and weekly stats follow this order.',
+  trainingDays: { one: '{count} training day', other: '{count} training days' },
+  restDays: { one: '{count} rest day', other: '{count} rest days' },
+  today: 'Today',
+  restDay: 'Rest day',
+  routineSummary: '{routine} · {count} exercises',
+  notPlanned: 'Not planned',
+  rest: 'Rest',
+  restA11y: '{day} is a rest day',
+  editExercises: 'Edit exercises',
+  addExercises: 'Add exercises',
+  editHint: 'Opens the exercise list for {day}',
+  useRoutineA11y: 'Use a saved routine on {day}',
+  start: 'Start',
+  recovery: 'Recovery is part of training.',
+  chooserTitle: '{day}: use a routine',
+  noRoutines: 'No saved routines yet. Use “Add exercises” to build this day.',
+  clearDay: 'Clear this day',
+};

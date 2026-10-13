@@ -3,6 +3,7 @@ import { DarkTheme, DefaultTheme, NavigationContainer, type Theme as NavTheme } 
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Icon, type IconName } from '../../components/common/Icon';
+import { useT } from '../../i18n';
 import { useTheme } from '../../theme/ThemeProvider';
 import { ProgressScreen } from '../../features/analytics/ProgressScreen';
 import { HomeScreen } from '../../features/dashboard/HomeScreen';
@@ -11,6 +12,7 @@ import { ExerciseFormScreen } from '../../features/exercises/ExerciseFormScreen'
 import { ExerciseLibraryScreen, ExercisePickerScreen } from '../../features/exercises/ExerciseListScreen';
 import { HistoryScreen } from '../../features/history/HistoryScreen';
 import { WorkoutDetailScreen } from '../../features/history/WorkoutDetailScreen';
+import { DriveHistoryScreen } from '../../features/history/DriveHistoryScreen';
 import { RoutineEditorScreen } from '../../features/routines/RoutineEditorScreen';
 import { RoutinesScreen } from '../../features/routines/RoutinesScreen';
 import { WeekPlanScreen } from '../../features/plan/WeekPlanScreen';
@@ -34,6 +36,7 @@ const TAB_ICON: Record<keyof TabParamList, IconName> = {
 
 function Tabs() {
   const t = useTheme();
+  const { t: tr } = useT();
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -48,17 +51,18 @@ function Tabs() {
         tabBarIcon: ({ color }) => <Icon name={TAB_ICON[route.name]} color={color} />,
       })}
     >
-      <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'RepNexa', tabBarLabel: 'Home' }} />
-      <Tab.Screen name="History" component={HistoryScreen} />
-      <Tab.Screen name="Exercises" component={ExerciseLibraryScreen} />
-      <Tab.Screen name="Progress" component={ProgressScreen} />
-      <Tab.Screen name="Settings" component={SettingsScreen} />
+      <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'RepNexa', tabBarLabel: tr('nav.tabs.home') }} />
+      <Tab.Screen name="History" component={HistoryScreen} options={{ title: tr('nav.tabs.history') }} />
+      <Tab.Screen name="Exercises" component={ExerciseLibraryScreen} options={{ title: tr('nav.tabs.exercises') }} />
+      <Tab.Screen name="Progress" component={ProgressScreen} options={{ title: tr('nav.tabs.progress') }} />
+      <Tab.Screen name="Settings" component={SettingsScreen} options={{ title: tr('nav.tabs.settings') }} />
     </Tab.Navigator>
   );
 }
 
 export function RootNavigator() {
   const t = useTheme();
+  const { t: tr } = useT();
   const navTheme: NavTheme = useMemo(() => {
     const base = t.dark ? DarkTheme : DefaultTheme;
     return {
@@ -85,7 +89,7 @@ export function RootNavigator() {
           // A bare chevron; otherwise iOS shows the previous route's name ("Tabs").
           headerBackButtonDisplayMode: 'minimal',
           // Also the back button's accessibility label, which would otherwise be "Tabs".
-          headerBackTitle: 'Back',
+          headerBackTitle: tr('nav.back'),
         }}
       >
         <Stack.Screen name="Tabs" component={Tabs} options={{ headerShown: false }} />
@@ -94,7 +98,7 @@ export function RootNavigator() {
           component={WorkoutScreen}
           options={{ headerShown: false, presentation: 'fullScreenModal', gestureEnabled: false }}
         />
-        <Stack.Screen name="ExercisePicker" component={ExercisePickerScreen} options={{ title: 'Add exercise', presentation: 'modal' }} />
+        <Stack.Screen name="ExercisePicker" component={ExercisePickerScreen} options={{ title: tr('nav.titles.addExercise'), presentation: 'modal' }} />
         <Stack.Screen
           name="WorkoutSummary"
           component={WorkoutSummaryScreen}
@@ -102,12 +106,13 @@ export function RootNavigator() {
         />
         <Stack.Screen name="WorkoutDetail" component={WorkoutDetailScreen} options={{ title: '' }} />
         <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={{ title: '' }} />
-        <Stack.Screen name="ExerciseForm" component={ExerciseFormScreen} options={{ title: 'New exercise', presentation: 'modal' }} />
-        <Stack.Screen name="Routines" component={RoutinesScreen} options={{ title: 'Routines' }} />
-        <Stack.Screen name="RoutineEditor" component={RoutineEditorScreen} options={{ title: 'Routine' }} />
-        <Stack.Screen name="Backup" component={BackupScreen} options={{ title: 'Backup and data' }} />
-        <Stack.Screen name="WeekPlan" component={WeekPlanScreen} options={{ title: 'Weekly plan' }} />
-        <Stack.Screen name="GymProfile" component={GymProfileScreen} options={{ title: 'My gym' }} />
+        <Stack.Screen name="ExerciseForm" component={ExerciseFormScreen} options={{ title: tr('nav.titles.newExercise'), presentation: 'modal' }} />
+        <Stack.Screen name="Routines" component={RoutinesScreen} options={{ title: tr('nav.titles.routines') }} />
+        <Stack.Screen name="RoutineEditor" component={RoutineEditorScreen} options={{ title: tr('nav.titles.routine') }} />
+        <Stack.Screen name="Backup" component={BackupScreen} options={{ title: tr('nav.titles.backup') }} />
+        <Stack.Screen name="DriveHistory" component={DriveHistoryScreen} options={{ title: tr('nav.titles.driveHistory') }} />
+        <Stack.Screen name="WeekPlan" component={WeekPlanScreen} options={{ title: tr('nav.titles.weekPlan') }} />
+        <Stack.Screen name="GymProfile" component={GymProfileScreen} options={{ title: tr('nav.titles.gymProfile') }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

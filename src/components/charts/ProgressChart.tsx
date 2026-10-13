@@ -21,8 +21,32 @@ const fmt = (v: number) => (Math.abs(v) >= 1000 ? `${Math.round(v / 100) / 10}k`
  * Line chart for progression over time (e.g. estimated 1RM). The accessibility
  * label carries the data, so the chart is never only visual.
  */
+/** More points than a phone-width chart can show; beyond this the series is thinned. */
+export const MAX_CHART_POINTS = 60;
+const MAX_DOTS = 30;
+
+/**
+ * Thins a long series to at most `max` points: time is cut into equal slices
+ * and each slice keeps its best value, so peaks (records) survive. The first
+ * and last points are always kept.
+ */
+export function downsample(points: readonly ChartPoint[], max = MAX_CHART_POINTS): ChartPoint[] {
+  if (points.length <= max) return [...points];
+  const first = points[0];
+  const last = points[points.length - 1];
+  const span = Math.max(1, last.x - first.x);
+  const slices = max - 2;
+  const best = new Map<number, ChartPoint>();
+  for (const p of points.slice(1, -1)) {
+    const k = Math.min(slices - 1, Math.floor(((p.x - first.x) / span) * slices));
+    const cur = best.get(k);
+    if (!cur || p.y > cur.y) best.set(k, p);
+  }
+  return [first, ...[...best.entries()].sort((a, b) => a[0] - b[0]).map(e => e[1]), last];
+}
+
 export function LineChart({
-  points,
+  points: rawPoints,
   height = 190,
   accessibilityLabel,
 }: {
@@ -32,6 +56,9 @@ export function LineChart({
 }) {
   const t = useTheme();
   const [W, onLayout] = useWidth();
+  // Years of sessions would mean hundreds of SVG nodes; thin them first.
+  const points = downsample(rawPoints);
+  const showDots = points.length <= MAX_DOTS;
   const left = 38;
   const right = 12;
   const top = 14;
@@ -69,6 +96,7 @@ export function LineChart({
         <Path d={d} fill="none" stroke={t.colors.ink} strokeWidth={2.2} strokeLinejoin="round" strokeLinecap="round" />
         {points.map((p, i) => {
           const last = i === points.length - 1;
+          if (!showDots && !last) return null;
           return (
             <Circle
               key={i}

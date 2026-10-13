@@ -1,5 +1,6 @@
-import React, { useCallback } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import React, { useCallback, useEffect, useRef } from 'react';
+import { Animated, Pressable, StyleSheet, View } from 'react-native';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
 import {
   convertDistance,
   convertWeight,
@@ -11,6 +12,7 @@ import type {
   WeightUnit,
   WorkoutSet,
 } from '../../domain/models';
+import { useT, type TKey, type Params } from '../../i18n';
 import { useStyles, useTheme } from '../../theme/ThemeProvider';
 import type { Theme } from '../../theme/tokens';
 import { formatWeight } from '../../utils/format';
@@ -49,6 +51,7 @@ function previousText(
   p: WorkoutSet | undefined,
   tracking: TrackingType,
   unit: WeightUnit,
+  t: (key: TKey, params?: Params) => string,
 ): string {
   if (!p) return '—';
   switch (tracking) {
@@ -61,9 +64,11 @@ function previousText(
         ? '—'
         : p.weightValue
         ? `+${formatWeight(p.weightValue, p.weightUnit, unit)} × ${p.reps}`
-        : `${p.reps} reps`;
+        : t('workout.set.repsOnly', { reps: p.reps });
     case 'duration':
-      return p.durationSeconds != null ? `${p.durationSeconds} s` : '—';
+      return p.durationSeconds != null
+        ? t('workout.set.secondsShort', { s: p.durationSeconds })
+        : '—';
     case 'distance_duration':
       return p.distanceValue != null && p.distanceUnit
         ? `${roundForDisplay(
@@ -97,8 +102,20 @@ export const SetRow = React.memo(function SetRowView({
   onRemove,
 }: SetRowProps) {
   const s = useStyles(styles);
-  const t = useTheme();
+  const theme = useTheme();
+  const { t } = useT();
   const done = set.completedAt != null;
+  // A small pop when a set is ticked: confirmation you can feel at a glance.
+  const reduce = useReducedMotion();
+  const pop = useRef(new Animated.Value(1)).current;
+  const wasDone = useRef(done);
+  useEffect(() => {
+    if (done && !wasDone.current && !reduce) {
+      pop.setValue(0.8);
+      Animated.spring(pop, { toValue: 1, friction: 4, tension: 160, useNativeDriver: true }).start();
+    }
+    wasDone.current = done;
+  }, [done, pop, reduce]);
   const id = set.id;
   const dUnit = distanceUnitFor(unit);
 
@@ -137,19 +154,14 @@ export const SetRow = React.memo(function SetRowView({
         );
   const badgeColor =
     set.setType === 'warmup'
-      ? t.colors.accent
+      ? theme.colors.accent
       : set.setType === 'drop'
-      ? t.colors.dropSet
+      ? theme.colors.dropSet
       : set.setType === 'failure'
-      ? t.colors.danger
-      : t.colors.ink;
-  const typeName = {
-    normal: 'working set',
-    warmup: 'warm-up',
-    drop: 'drop set',
-    failure: 'set to failure',
-  }[set.setType];
-  const a11y = `Set ${label}`;
+      ? theme.colors.danger
+      : theme.colors.ink;
+  const typeName = t(`workout.set.typeName.${set.setType}`);
+  const a11y = t('workout.set.label', { label });
 
   let fieldA: React.ReactNode = <View style={s.spacer} />;
   let fieldB: React.ReactNode;
@@ -161,9 +173,12 @@ export const SetRow = React.memo(function SetRowView({
           value={weightShown}
           onCommit={saveWeight}
           placeholder={tracking === 'bodyweight_reps' ? '+0' : '0'}
-          accessibilityLabel={`${a11y}, ${
-            tracking === 'bodyweight_reps' ? 'added weight' : 'weight'
-          } in ${unit}`}
+          accessibilityLabel={t(
+            tracking === 'bodyweight_reps'
+              ? 'workout.set.addedWeightIn'
+              : 'workout.set.weightIn',
+            { set: a11y, unit },
+          )}
           muted={done}
         />
       );
@@ -172,7 +187,7 @@ export const SetRow = React.memo(function SetRowView({
           value={set.reps}
           onCommit={saveReps}
           integer
-          accessibilityLabel={`${a11y}, reps`}
+          accessibilityLabel={t('workout.set.reps', { set: a11y })}
           muted={done}
         />
       );
@@ -183,7 +198,7 @@ export const SetRow = React.memo(function SetRowView({
           value={set.durationSeconds}
           onCommit={saveSeconds}
           integer
-          accessibilityLabel={`${a11y}, seconds`}
+          accessibilityLabel={t('workout.set.seconds', { set: a11y })}
           muted={done}
         />
       );
@@ -200,7 +215,10 @@ export const SetRow = React.memo(function SetRowView({
                 )
           }
           onCommit={saveDistance}
-          accessibilityLabel={`${a11y}, distance in ${dUnit}`}
+          accessibilityLabel={t('workout.set.distanceIn', {
+            set: a11y,
+            unit: dUnit,
+          })}
           muted={done}
         />
       );
@@ -212,7 +230,7 @@ export const SetRow = React.memo(function SetRowView({
               : roundForDisplay(set.durationSeconds / 60, 2)
           }
           onCommit={saveMinutes}
-          accessibilityLabel={`${a11y}, minutes`}
+          accessibilityLabel={t('workout.set.minutes', { set: a11y })}
           muted={done}
         />
       );
@@ -228,16 +246,18 @@ export const SetRow = React.memo(function SetRowView({
         accessibilityLabel={`${a11y}, ${typeName}${
           set.rpe != null ? `, RPE ${set.rpe}` : ''
         }`}
-        accessibilityHint="Tap to change the set type. Long-press for set type and RPE."
+        accessibilityHint={t('workout.set.badgeHint')}
         accessibilityActions={[
-          { name: 'longpress', label: 'Set type and RPE' },
+          { name: 'longpress', label: t('workout.set.optionsAction') },
         ]}
         onAccessibilityAction={e => {
           if (e.nativeEvent.actionName === 'longpress') onOpenOptions(id);
         }}
         style={[
           s.badge,
-          set.setType === 'warmup' && { backgroundColor: t.colors.amberSoft },
+          set.setType === 'warmup' && {
+            backgroundColor: theme.colors.amberSoft,
+          },
         ]}
       >
         <AppText variant="label" style={[s.badgeText, { color: badgeColor }]}>
@@ -249,13 +269,11 @@ export const SetRow = React.memo(function SetRowView({
           variant="caption"
           color="ink3"
           numberOfLines={1}
-          accessibilityLabel={`Previous: ${previousText(
-            previous,
-            tracking,
-            unit,
-          )}`}
+          accessibilityLabel={t('workout.set.previous', {
+            text: previousText(previous, tracking, unit, t),
+          })}
         >
-          {mode === 'edit' ? '' : previousText(previous, tracking, unit)}
+          {mode === 'edit' ? '' : previousText(previous, tracking, unit, t)}
         </AppText>
         {set.rpe != null ? (
           <AppText
@@ -270,11 +288,11 @@ export const SetRow = React.memo(function SetRowView({
       </View>
       <View style={s.a}>{fieldA}</View>
       <View style={s.b}>{fieldB}</View>
-      {mode === 'edit' ? (
+      {mode === 'edit' && done ? (
         <Pressable
           onPress={() => onRemove?.(id)}
           accessibilityRole="button"
-          accessibilityLabel={`Remove set ${label}`}
+          accessibilityLabel={t('workout.set.remove', { label })}
           hitSlop={4}
           style={s.check}
         >
@@ -285,11 +303,13 @@ export const SetRow = React.memo(function SetRowView({
           onPress={() => onToggle(id)}
           accessibilityRole="checkbox"
           accessibilityState={{ checked: done }}
-          accessibilityLabel={`${a11y} done`}
+          accessibilityLabel={t('workout.set.done', { set: a11y })}
           hitSlop={4}
           style={[s.check, done && s.checkOn]}
         >
-          <AppText style={[s.checkText, done && s.checkTextOn]}>✓</AppText>
+          <Animated.View style={{ transform: [{ scale: pop }] }}>
+            <AppText style={[s.checkText, done && s.checkTextOn]}>✓</AppText>
+          </Animated.View>
         </Pressable>
       )}
     </View>

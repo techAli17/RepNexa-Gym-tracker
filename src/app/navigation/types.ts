@@ -15,7 +15,9 @@ export type TabParamList = {
 export type PickerMode =
   | { mode: 'add' }
   | { mode: 'replace'; workoutExerciseId: string; exerciseId: string }
-  | { mode: 'routine' };
+  | { mode: 'routine' }
+  /** Add to a finished workout from its history detail. */
+  | { mode: 'history'; workoutId: string };
 
 export type RootStackParamList = {
   Tabs: NavigatorScreenParams<TabParamList>;
@@ -33,6 +35,7 @@ export type RootStackParamList = {
    */
   RoutineEditor: { id?: string; addExerciseId?: string; addNonce?: number; planDay?: number };
   WeekPlan: undefined;
+  DriveHistory: undefined;
   GymProfile: undefined;
   Backup: undefined;
 };

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { useAccountActions, useActiveWorkoutStore, useAuth, useBackupStatus, useScheduler, useServices, useSettings } from '../../app/AppContext';
 import type { RootScreenProps } from '../../app/navigation/types';
 import type { ImportPreview } from '../../application/backup/BackupService';
@@ -11,30 +11,26 @@ import { Button } from '../../components/common/Button';
 import { Card } from '../../components/common/Card';
 import { ChoiceChips } from '../../components/common/FormControls';
 import { Icon } from '../../components/common/Icon';
+import { useT } from '../../i18n';
 import { toast, toastError } from '../../store/toastStore';
 import { useStyles, useTheme } from '../../theme/ThemeProvider';
 import type { Theme } from '../../theme/tokens';
 import { formatDate } from '../../utils/format';
 
-const RETENTION: ReadonlyArray<readonly [string, string]> = [
-  ['all', 'Keep all'],
-  ['24', '2 years'],
-  ['12', '1 year'],
-  ['6', '6 months'],
-];
+type I18n = Pick<ReturnType<typeof useT>, 't' | 'tn'>;
 
-function describePreview(p: ImportPreview): string {
+function describePreview(p: ImportPreview, { t, tn }: I18n): string {
   const s = p.stats;
-  if (p.noChanges) return 'Everything in this backup is already on this phone (or newer here). Nothing will change.';
+  if (p.noChanges) return t('backup.preview.noChanges');
   const parts = [
-    s.workoutsAdded && `${s.workoutsAdded} new ${s.workoutsAdded === 1 ? 'workout' : 'workouts'}`,
-    s.workoutsUpdated && `${s.workoutsUpdated} updated`,
-    s.workoutsDeleted && `${s.workoutsDeleted} deleted (they were deleted on another device)`,
-    s.routinesChanged && `${s.routinesChanged} ${s.routinesChanged === 1 ? 'routine' : 'routines'}`,
-    s.exercisesChanged && `${s.exercisesChanged} ${s.exercisesChanged === 1 ? 'exercise' : 'exercises'}`,
+    s.workoutsAdded && tn('backup.preview.newWorkouts', s.workoutsAdded),
+    s.workoutsUpdated && t('backup.preview.updated', { count: s.workoutsUpdated }),
+    s.workoutsDeleted && t('backup.preview.deleted', { count: s.workoutsDeleted }),
+    s.routinesChanged && tn('backup.preview.routines', s.routinesChanged),
+    s.exercisesChanged && tn('backup.preview.exercises', s.exercisesChanged),
   ].filter(Boolean);
-  const kept = s.keptLocal ? ` ${s.keptLocal} newer ${s.keptLocal === 1 ? 'item' : 'items'} on this phone will be kept.` : '';
-  return `This will add or update: ${parts.join(', ')}.${kept} Nothing on this phone is removed unless it was deleted elsewhere later.`;
+  const kept = s.keptLocal ? ` ${tn('backup.preview.kept', s.keptLocal)}` : '';
+  return t('backup.preview.summary', { parts: parts.join(t('backup.preview.separator')), kept });
 }
 
 export function BackupScreen(_: RootScreenProps<'Backup'>) {
@@ -47,7 +43,9 @@ export function BackupScreen(_: RootScreenProps<'Backup'>) {
   const settings = useSettings(x => x.settings);
   const update = useSettings(x => x.update);
   const s = useStyles(styles);
-  const t = useTheme();
+  const theme = useTheme();
+  const i18n = useT();
+  const { t } = i18n;
   const [busy, setBusy] = useState<string | null>(null);
 
   const run = async (key: string, fn: () => Promise<void>) => {
@@ -63,19 +61,19 @@ export function BackupScreen(_: RootScreenProps<'Backup'>) {
   };
 
   /** Shows what a backup would change, and applies it only after the user agrees. */
-  const confirmImport = (preview: ImportPreview, source: string) => {
-    Alert.alert(`Restore from ${source}?`, describePreview(preview), [
-      { text: 'Cancel', style: 'cancel' },
+  const confirmImport = (preview: ImportPreview, title: string) => {
+    Alert.alert(title, describePreview(preview, i18n), [
+      { text: t('common.cancel'), style: 'cancel' },
       ...(preview.noChanges
         ? []
         : [
             {
-              text: 'Restore',
+              text: t('backup.restore'),
               onPress: () =>
                 void run('apply', async () => {
                   await services.backup.applyImport(preview.file);
                   await store.getState().load();
-                  toast('Restore complete');
+                  toast(t('backup.restoreComplete'));
                 }),
             },
           ]),
@@ -91,11 +89,10 @@ export function BackupScreen(_: RootScreenProps<'Backup'>) {
       <BackupStatus />
 
       <Card style={s.mt}>
-        <AppText variant="heading">Google account</AppText>
+        <AppText variant="heading">{t('backup.googleAccount')}</AppText>
         {state.phase === 'notConfigured' ? (
           <AppText color="ink2" style={s.p}>
-            Google sign-in is not set up in this build, so backups to Drive are unavailable. Your workouts are saved on this phone,
-            and you can still export them as a file below.
+            {t('backup.notConfigured')}
           </AppText>
         ) : signedIn ? (
           <>
@@ -110,116 +107,161 @@ export function BackupScreen(_: RootScreenProps<'Backup'>) {
                 </AppText>
               </View>
             </View>
-            <Button label="Sign out" variant="outline" onPress={() => void run('signout', actions.signOut)} busy={busy === 'signout'} />
+            <Button label={t('backup.signOut')} variant="outline" onPress={() => void run('signout', actions.signOut)} busy={busy === 'signout'} />
           </>
         ) : (
           <>
             <AppText color="ink2" style={s.p}>
-              Sign in to back up to your own Google Drive. RepNexa has no servers; your workouts never go anywhere else.
+              {t('backup.signInIntro')}
             </AppText>
-            <Button label="Sign in with Google" variant="ink" onPress={() => void run('signin', actions.signIn)} busy={busy === 'signin'} />
+            <Button label={t('backup.signIn')} variant="ink" onPress={() => void run('signin', actions.signIn)} busy={busy === 'signin'} />
           </>
         )}
       </Card>
 
       {signedIn ? (
         <Card style={s.mt}>
-          <AppText variant="heading">Drive backup</AppText>
+          <AppText variant="heading">{t('backup.driveBackup')}</AppText>
           {driveOn ? (
             <>
               <View style={s.row}>
                 <AppText color="ink3" style={s.flex}>
-                  Last successful backup
+                  {t('backup.lastSuccess')}
                 </AppText>
                 <AppText variant="label">
                   {state.lastSuccessAt
                     ? formatDate(state.lastSuccessAt, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })
-                    : 'Never'}
+                    : t('backup.never')}
                 </AppText>
               </View>
               <View style={s.row}>
-                <AppText style={s.flex}>Back up automatically</AppText>
+                <AppText style={s.flex}>{t('backup.auto')}</AppText>
                 <Switch
                   value={settings.autoBackup}
                   onValueChange={v => void update({ autoBackup: v }).then(() => scheduler.refresh())}
-                  trackColor={{ true: t.colors.amber, false: t.colors.raise }}
-                  accessibilityLabel="Back up automatically"
+                  trackColor={{ true: theme.colors.amber, false: theme.colors.raise }}
+                  accessibilityLabel={t('backup.auto')}
                 />
               </View>
               <Button
-                label={state.phase === 'running' ? 'Backing up…' : 'Back up now'}
+                label={state.phase === 'running' ? t('backup.backingUp') : t('backup.backUpNow')}
                 variant="ink"
                 busy={busy === 'now' || state.phase === 'running'}
                 onPress={() =>
                   void run('now', async () => {
                     const out = await scheduler.runNow();
                     const st = scheduler.getState();
-                    if (st.phase === 'idle' && out) toast(out.status === 'upToDate' ? 'Already up to date' : 'Backup uploaded and verified');
+                    if (st.phase === 'idle' && out) toast(out.status === 'upToDate' ? t('backup.upToDate') : t('backup.uploaded'));
                   })
                 }
               />
               <Button
-                label="Restore from Drive"
+                label={t('backup.restoreDrive')}
                 variant="outline"
                 style={s.mtSm}
                 busy={busy === 'restore'}
                 onPress={() =>
                   void run('restore', async () => {
                     const preview = await services.backup.previewRemote(new DriveBackupStore(auth));
-                    if (!preview) toast('No backup found in your Drive yet');
-                    else confirmImport(preview, 'Drive');
+                    if (!preview) toast(t('backup.noRemote'));
+                    else confirmImport(preview, t('backup.restoreFromDrive'));
                   })
                 }
               />
               <AppText variant="caption" color="ink3" style={s.p}>
-                Backups go to the RepNexa folder in your Drive as RepNexa-Backup.json. RepNexa can see only files it created there,
-                nothing else in your Drive.
+                {t('backup.driveNote')}
               </AppText>
             </>
           ) : (
             <>
               <AppText color="ink2" style={s.p}>
                 {state.error
-                  ? 'RepNexa can no longer write to your Drive. Allow access again to resume backups.'
-                  : 'Allow RepNexa to create its backup file in your Drive. It cannot see your other files.'}
+                  ? t('backup.driveLost')
+                  : t('backup.driveAsk')}
               </AppText>
-              <Button label="Allow Drive backup" variant="ink" onPress={() => void run('drive', actions.connectDrive)} busy={busy === 'drive'} />
+              <Button label={t('backup.allowDrive')} variant="ink" onPress={() => void run('drive', actions.connectDrive)} busy={busy === 'drive'} />
             </>
           )}
         </Card>
       ) : null}
 
       <Card style={s.mt}>
-        <AppText variant="heading">History on this phone</AppText>
+        <AppText variant="heading">{t('backup.whereKept')}</AppText>
+        <View accessibilityRole="radiogroup" accessibilityLabel={t('backup.whereKept')}>
+          <PolicyOption
+            title={t('backup.phoneAndDrive')}
+            tag={t('backup.recommended')}
+            body={t('backup.phoneAndDriveBody')}
+            selected={settings.storagePolicy !== 'drive_only'}
+            onPress={() => void update({ storagePolicy: 'phone_and_drive' }).then(() => scheduler.refresh(), toastError)}
+          />
+          <PolicyOption
+            title={t('backup.driveOnly')}
+            body={t('backup.driveOnlyBody')}
+            selected={settings.storagePolicy === 'drive_only'}
+            onPress={() => {
+              if (settings.storagePolicy === 'drive_only') return;
+              if (!driveOn) {
+                Alert.alert(t('backup.connectFirst'), t('backup.connectFirstMessage'));
+                return;
+              }
+              Alert.alert(
+                t('backup.driveOnlyTitle'),
+                t('backup.driveOnlyMessage'),
+                [
+                  { text: t('common.cancel'), style: 'cancel' },
+                  {
+                    text: t('backup.useDriveOnly'),
+                    onPress: () =>
+                      void update({ storagePolicy: 'drive_only' }).then(async () => {
+                        await scheduler.refresh();
+                        void scheduler.runNow();
+                      }, toastError),
+                  },
+                ],
+              );
+            }}
+          />
+        </View>
+      </Card>
+
+      {settings.storagePolicy === 'drive_only' ? null : (
+      <Card style={s.mt}>
+        <AppText variant="heading">{t('backup.historyOnPhone')}</AppText>
         <AppText color="ink2" style={s.p}>
-          Older workouts can be removed from this phone to save space. Each one is removed only after a verified Drive backup
-          holds it, and it stays in Drive.
+          {t('backup.historyOnPhoneBody')}
         </AppText>
         <ChoiceChips
-          label="Keep workouts on this phone"
+          label={t('backup.keepOnPhone')}
           value={settings.localRetentionMonths == null ? 'all' : String(settings.localRetentionMonths)}
-          options={RETENTION}
+          options={[
+            ['all', t('backup.retention.all')],
+            ['24', t('backup.retention.years2')],
+            ['12', t('backup.retention.year1')],
+            ['6', t('backup.retention.months6')],
+          ]}
           onChange={v => {
             const months = v === 'all' ? null : Number(v);
             if (months != null && !driveOn) {
-              Alert.alert('Drive backup is off', 'Nothing will be removed until a verified Drive backup holds it.');
+              Alert.alert(t('backup.driveOff'), t('backup.driveOffMessage'));
             }
             void update({ localRetentionMonths: months }).catch(toastError);
           }}
         />
         <AppText variant="caption" color="ink3" style={s.p}>
-          Removing workouts from RepNexa cannot erase copies in your phone’s own system backups or files you exported.
+          {t('backup.systemBackupsNote')}
         </AppText>
       </Card>
+      )}
 
       <Card style={s.mt}>
-        <AppText variant="heading">Export and import</AppText>
+        <AppText variant="heading">{t('backup.exportImport')}</AppText>
         <AppText color="ink2" style={s.p}>
-          A JSON file with all your workouts, routines and custom exercises. Keep it anywhere you like.
+          {t('backup.exportImportBody')}
         </AppText>
         <View style={s.pair}>
           <Button
-            label="Export"
+            label={t('backup.export')}
             variant="outline"
             style={s.flex}
             busy={busy === 'export'}
@@ -231,7 +273,7 @@ export function BackupScreen(_: RootScreenProps<'Backup'>) {
             }
           />
           <Button
-            label="Import"
+            label={t('backup.import')}
             variant="outline"
             style={s.flex}
             busy={busy === 'import'}
@@ -239,7 +281,7 @@ export function BackupScreen(_: RootScreenProps<'Backup'>) {
               void run('import', async () => {
                 const text = await pickJsonFile();
                 if (text == null) return;
-                confirmImport(await services.backup.previewImport(text), 'this file');
+                confirmImport(await services.backup.previewImport(text), t('backup.restoreFromFile'));
               })
             }
           />
@@ -250,33 +292,33 @@ export function BackupScreen(_: RootScreenProps<'Backup'>) {
         <View style={s.note}>
           <Icon name="shield" size={20} tint="good" />
           <AppText color="ink2" style={s.flex}>
-            RepNexa has no servers. Your workouts are stored only on this phone and, if you turn it on, in your own Google Drive.
+            {t('backup.privacyNote')}
           </AppText>
         </View>
         {signedIn ? (
           <Button
-            label="Remove RepNexa’s access to Google"
+            label={t('backup.removeAccess')}
             variant="dangerText"
             onPress={() =>
-              Alert.alert('Remove access?', 'Backups stop. Your Drive file and the data on this phone are kept.', [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Remove', style: 'destructive', onPress: () => void run('revoke', actions.disconnect) },
+              Alert.alert(t('backup.removeAccessTitle'), t('backup.removeAccessMessage'), [
+                { text: t('common.cancel'), style: 'cancel' },
+                { text: t('common.remove'), style: 'destructive', onPress: () => void run('revoke', actions.disconnect) },
               ])
             }
           />
         ) : null}
         <Button
-          label="Delete data on this phone"
+          label={t('backup.deleteLocal')}
           variant="dangerText"
           onPress={() =>
             Alert.alert(
-              'Delete data on this phone?',
+              t('backup.deleteLocalTitle'),
               state.pending || !state.lastSuccessAt
-                ? 'Some workouts are NOT in a backup. They will be gone for good. Export them first if you want to keep them.'
-                : 'Your Drive backup is kept and can be restored later.',
+                ? t('backup.deleteLocalUnsaved')
+                : t('backup.deleteLocalSaved'),
               [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Delete', style: 'destructive', onPress: () => void run('wipe', actions.wipeLocal) },
+                { text: t('common.cancel'), style: 'cancel' },
+                { text: t('common.delete'), style: 'destructive', onPress: () => void run('wipe', actions.wipeLocal) },
               ],
             )
           }
@@ -300,4 +342,53 @@ const styles = (t: Theme) =>
     avatarText: { color: t.colors.bg, fontWeight: '800', fontSize: 18 },
     pair: { flexDirection: 'row', gap: 8 },
     note: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', marginBottom: 6 },
+    policy: {
+      flexDirection: 'row',
+      gap: 12,
+      borderWidth: 1.5,
+      borderColor: t.colors.line,
+      borderRadius: 16,
+      padding: 14,
+      marginTop: 10,
+    },
+    policyOn: { borderColor: t.colors.amber },
+    policyBody: { marginTop: 3 },
+    radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: t.colors.ink3, marginTop: 1 },
+    radioOn: { borderColor: t.colors.amber, backgroundColor: t.colors.amber },
   });
+
+function PolicyOption({
+  title,
+  tag,
+  body,
+  selected,
+  onPress,
+}: {
+  title: string;
+  tag?: string;
+  body: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  const s = useStyles(styles);
+  return (
+    <Pressable
+      style={[s.policy, selected && s.policyOn]}
+      onPress={onPress}
+      accessibilityRole="radio"
+      accessibilityState={{ checked: selected }}
+      accessibilityLabel={`${title}. ${body}`}
+    >
+      <View style={[s.radio, selected && s.radioOn]} />
+      <View style={s.flex}>
+        <AppText variant="label">
+          {title}
+          {tag ? <AppText variant="caption" color="accent">{`  ${tag}`}</AppText> : null}
+        </AppText>
+        <AppText variant="caption" color="ink2" style={s.policyBody}>
+          {body}
+        </AppText>
+      </View>
+    </Pressable>
+  );
+}

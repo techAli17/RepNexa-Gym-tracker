@@ -11,7 +11,9 @@ import { Field, TextField } from '../../components/common/FormControls';
 import { Icon } from '../../components/common/Icon';
 import { Stepper } from '../../components/common/Stepper';
 import { RestPickerSheet } from '../../components/workout/RestPickerSheet';
-import { WEEKDAY_NAMES, type Weekday } from '../../domain/models';
+import { type Weekday } from '../../domain/models';
+import { translateMessage, useT } from '../../i18n';
+import { weekdayName } from '../../i18n/labels';
 import { routineInputSchema } from '../../domain/validation';
 import { toast, toastError } from '../../store/toastStore';
 import { useStyles } from '../../theme/ThemeProvider';
@@ -20,14 +22,16 @@ import type { Theme } from '../../theme/tokens';
 type FormIn = z.input<typeof routineInputSchema>;
 type FormOut = z.output<typeof routineInputSchema>;
 
-const restText = (sec: number | null | undefined, fallback: number) => {
+const restText = (sec: number | null | undefined, fallback: number, t: ReturnType<typeof useT>['t']) => {
   const v = sec ?? fallback;
-  return `${sec == null ? 'Default ' : ''}${Math.floor(v / 60)}:${String(v % 60).padStart(2, '0')}`;
+  const time = `${Math.floor(v / 60)}:${String(v % 60).padStart(2, '0')}`;
+  return sec == null ? t('routines.editor.restDefault', { time }) : time;
 };
 
 export function RoutineEditorScreen({ navigation, route }: RootScreenProps<'RoutineEditor'>) {
   const { id, addExerciseId, addNonce, planDay } = route.params ?? {};
-  const dayName = planDay != null ? WEEKDAY_NAMES[planDay as Weekday] : null;
+  const { t } = useT();
+  const dayName = planDay != null ? weekdayName(planDay as Weekday, t) : null;
   const services = useServices();
   const defaultRest = useSettings(x => x.settings.defaultRestSeconds);
   const s = useStyles(styles);
@@ -36,13 +40,15 @@ export function RoutineEditorScreen({ navigation, route }: RootScreenProps<'Rout
   const [saving, setSaving] = useState(false);
   const { control, handleSubmit, reset, formState, watch } = useForm<FormIn, unknown, FormOut>({
     resolver: zodResolver(routineInputSchema),
-    defaultValues: { name: dayName ? `${dayName} workout` : '', notes: '', exercises: [] },
+    defaultValues: { name: dayName ? t('routines.editor.dayWorkout', { day: dayName }) : '', notes: '', exercises: [] },
   });
   const { fields, append, remove, move, update } = useFieldArray({ control, name: 'exercises' });
   const exercises = watch('exercises');
 
   useEffect(() => {
-    navigation.setOptions({ title: id ? 'Edit routine' : dayName ? `${dayName}’s exercises` : 'New routine' });
+    navigation.setOptions({
+      title: id ? t('routines.editor.titleEdit') : dayName ? t('routines.editor.titleDay', { day: dayName }) : t('routines.editor.titleNew'),
+    });
     if (!id) return;
     services.routines.get(id).then(v => {
       if (!v) return;
@@ -59,7 +65,7 @@ export function RoutineEditorScreen({ navigation, route }: RootScreenProps<'Rout
         })),
       });
     }, toastError);
-  }, [id, dayName, navigation, reset, services]);
+  }, [id, dayName, navigation, reset, services, t]);
 
   // The picker hands a chosen exercise back through params; the nonce makes repeats count.
   useEffect(() => {
@@ -78,7 +84,7 @@ export function RoutineEditorScreen({ navigation, route }: RootScreenProps<'Rout
       if (id) await services.routines.update(id, values);
       else if (planDay != null) await services.plan.createDayRoutine(planDay, values);
       else await services.routines.create(values);
-      toast('Routine saved');
+      toast(t('routines.editor.saved'));
       navigation.goBack();
     } catch (e) {
       toastError(e);
@@ -93,14 +99,14 @@ export function RoutineEditorScreen({ navigation, route }: RootScreenProps<'Rout
         control={control}
         name="name"
         render={({ field, fieldState }) => (
-          <Field label="Name" error={fieldState.error?.message}>
+          <Field label={t('routines.editor.name')} error={fieldState.error?.message && translateMessage(fieldState.error.message)}>
             <TextField
               value={field.value}
               onChangeText={field.onChange}
               onBlur={field.onBlur}
-              placeholder="e.g. Push A"
+              placeholder={t('routines.editor.namePlaceholder')}
               maxLength={80}
-              accessibilityLabel="Routine name"
+              accessibilityLabel={t('routines.editor.nameA11y')}
               invalid={!!fieldState.error}
             />
           </Field>
@@ -110,68 +116,76 @@ export function RoutineEditorScreen({ navigation, route }: RootScreenProps<'Rout
         control={control}
         name="notes"
         render={({ field }) => (
-          <Field label="Notes (optional)">
-            <TextField value={field.value ?? ''} onChangeText={field.onChange} multiline maxLength={1000} accessibilityLabel="Routine notes" style={s.multi} />
+          <Field label={t('routines.editor.notes')}>
+            <TextField
+              value={field.value ?? ''}
+              onChangeText={field.onChange}
+              multiline
+              maxLength={1000}
+              accessibilityLabel={t('routines.editor.notesA11y')}
+              style={s.multi}
+            />
           </Field>
         )}
       />
 
       <AppText variant="heading" style={s.h}>
-        Exercises
+        {t('routines.editor.exercises')}
       </AppText>
       {formState.errors.exercises?.message || formState.errors.exercises?.root?.message ? (
         <AppText color="danger" style={s.err}>
-          {formState.errors.exercises?.message ?? formState.errors.exercises?.root?.message}
+          {translateMessage(formState.errors.exercises?.message ?? formState.errors.exercises?.root?.message ?? '')}
         </AppText>
       ) : null}
 
       {fields.map((f, i) => {
         const v = exercises[i];
         if (!v) return null;
-        const name = names[v.exerciseId] ?? 'Exercise';
+        const name = names[v.exerciseId] ?? t('routines.editor.exerciseFallback');
+        const rest = restText(v.restSeconds, defaultRest, t);
         return (
           <View key={f.id} style={s.item}>
             <View style={s.itemHead}>
               <AppText variant="label" style={s.itemName} numberOfLines={2}>
                 {i + 1}. {name}
               </AppText>
-              <IconBtn icon="arrowUp" label={`Move ${name} up`} disabled={i === 0} onPress={() => move(i, i - 1)} />
-              <IconBtn icon="arrowDown" label={`Move ${name} down`} disabled={i === fields.length - 1} onPress={() => move(i, i + 1)} />
-              <IconBtn icon="trash" label={`Remove ${name}`} danger onPress={() => remove(i)} />
+              <IconBtn icon="arrowUp" label={t('routines.editor.moveUpA11y', { name })} disabled={i === 0} onPress={() => move(i, i - 1)} />
+              <IconBtn icon="arrowDown" label={t('routines.editor.moveDownA11y', { name })} disabled={i === fields.length - 1} onPress={() => move(i, i + 1)} />
+              <IconBtn icon="trash" label={t('routines.editor.removeA11y', { name })} danger onPress={() => remove(i)} />
             </View>
             <View style={s.itemRow}>
               <View style={s.ctrl}>
                 <AppText variant="caption" color="ink3">
-                  Sets
+                  {t('routines.editor.sets')}
                 </AppText>
-                <Stepper label={`Sets for ${name}`} value={v.targetSets} min={1} max={20} onChange={n => update(i, { ...v, targetSets: n })} />
+                <Stepper label={t('routines.editor.setsA11y', { name })} value={v.targetSets} min={1} max={20} onChange={n => update(i, { ...v, targetSets: n })} />
               </View>
               <View style={s.ctrl}>
                 <AppText variant="caption" color="ink3">
-                  Reps
+                  {t('routines.editor.reps')}
                 </AppText>
                 <Stepper
-                  label={`Target reps for ${name}`}
+                  label={t('routines.editor.repsA11y', { name })}
                   value={v.targetReps ?? 0}
                   min={0}
                   max={100}
-                  format={n => (n === 0 ? 'Any' : String(n))}
+                  format={n => (n === 0 ? t('routines.editor.any') : String(n))}
                   onChange={n => update(i, { ...v, targetReps: n === 0 ? null : n })}
                 />
               </View>
             </View>
-            <Pressable style={s.rest} onPress={() => setRestIndex(i)} accessibilityRole="button" accessibilityLabel={`Rest for ${name}: ${restText(v.restSeconds, defaultRest)}`}>
+            <Pressable style={s.rest} onPress={() => setRestIndex(i)} accessibilityRole="button" accessibilityLabel={t('routines.editor.restA11y', { name, time: rest })}>
               <Icon name="timer" size={16} tint="ink2" />
               <AppText variant="caption" color="ink2">
-                Rest {restText(v.restSeconds, defaultRest)}
+                {t('routines.editor.rest', { time: rest })}
               </AppText>
             </Pressable>
           </View>
         );
       })}
 
-      <Button label="+ Add exercise" variant="ghost" onPress={() => navigation.navigate('ExercisePicker', { mode: 'routine' })} style={s.add} />
-      <Button label="Save routine" variant="ink" onPress={submit} busy={saving} style={s.save} />
+      <Button label={t('routines.editor.addExercise')} variant="ghost" onPress={() => navigation.navigate('ExercisePicker', { mode: 'routine' })} style={s.add} />
+      <Button label={t('routines.editor.save')} variant="ink" onPress={submit} busy={saving} style={s.save} />
 
       <RestPickerSheet
         visible={restIndex != null}

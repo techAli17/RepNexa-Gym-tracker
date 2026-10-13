@@ -6,7 +6,8 @@ import { AppText } from '../../components/common/AppText';
 import { Button } from '../../components/common/Button';
 import { Field, TextField } from '../../components/common/FormControls';
 import { Icon } from '../../components/common/Icon';
-import { GymPhotoStore } from '../../infrastructure/gym-photo/GymPhotoStore';
+import { GymPhotoStore } from '../../infrastructure/photos/PhotoStore';
+import { useT } from '../../i18n';
 import { toast, toastError } from '../../store/toastStore';
 import { useStyles } from '../../theme/ThemeProvider';
 import type { Theme } from '../../theme/tokens';
@@ -18,6 +19,7 @@ export function GymProfileScreen({
   const settings = useSettings(x => x.settings);
   const update = useSettings(x => x.update);
   const s = useStyles(styles);
+  const { t } = useT();
   const [name, setName] = useState(settings.gymName ?? '');
   const [busy, setBusy] = useState<'camera' | 'library' | 'save' | null>(null);
 
@@ -32,7 +34,7 @@ export function GymProfileScreen({
       const previous = settings.gymPhotoFile;
       await update({ gymPhotoFile: file });
       await GymPhotoStore.remove(previous);
-      toast('Gym photo saved');
+      toast(t('settings.gymProfile.photoSaved'));
     } catch (e) {
       toastError(e);
     } finally {
@@ -41,10 +43,10 @@ export function GymProfileScreen({
   };
 
   const removePhoto = () =>
-    Alert.alert('Remove the gym photo?', 'It is deleted from this phone.', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('settings.gymProfile.removeTitle'), t('settings.gymProfile.removeMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Remove',
+        text: t('common.remove'),
         style: 'destructive',
         onPress: async () => {
           const previous = settings.gymPhotoFile;
@@ -59,7 +61,7 @@ export function GymProfileScreen({
     try {
       const trimmed = name.trim().slice(0, 60);
       await update({ gymName: trimmed || null });
-      toast('Saved');
+      toast(t('settings.gymProfile.saved'));
       navigation.goBack();
     } catch (e) {
       toastError(e);
@@ -80,13 +82,17 @@ export function GymProfileScreen({
             source={{ uri: GymPhotoStore.uri(settings.gymPhotoFile) }}
             style={s.image}
             resizeMode="cover"
-            accessibilityLabel={`Photo of ${settings.gymName ?? 'your gym'}`}
+            accessibilityLabel={
+              settings.gymName
+                ? t('settings.gymProfile.photoOf', { name: settings.gymName })
+                : t('settings.gymProfile.photoOfYourGym')
+            }
           />
         ) : (
-          <View style={s.placeholder} accessibilityLabel="No gym photo yet">
+          <View style={s.placeholder} accessibilityLabel={t('settings.gymProfile.noPhoto')}>
             <Icon name="barbell" size={48} tint="ink3" strokeWidth={1.6} />
             <AppText variant="caption" color="ink3">
-              Add a photo of your gym
+              {t('settings.gymProfile.addPhoto')}
             </AppText>
           </View>
         )}
@@ -94,14 +100,14 @@ export function GymProfileScreen({
 
       <View style={s.pair}>
         <Button
-          label="Take photo"
+          label={t('settings.gymProfile.takePhoto')}
           variant="ink"
           onPress={() => void takePhoto('camera')}
           busy={busy === 'camera'}
           style={s.flex}
         />
         <Button
-          label="Choose photo"
+          label={t('settings.gymProfile.choosePhoto')}
           variant="outline"
           onPress={() => void takePhoto('library')}
           busy={busy === 'library'}
@@ -110,32 +116,31 @@ export function GymProfileScreen({
       </View>
       {settings.gymPhotoFile ? (
         <Button
-          label="Remove photo"
+          label={t('settings.gymProfile.removePhoto')}
           variant="dangerText"
           onPress={removePhoto}
         />
       ) : null}
 
-      <Field label="Gym name">
+      <Field label={t('settings.gymProfile.name')}>
         <TextField
           value={name}
           onChangeText={setName}
-          placeholder="e.g. Iron Temple"
+          placeholder={t('settings.gymProfile.namePlaceholder')}
           maxLength={60}
-          accessibilityLabel="Gym name"
+          accessibilityLabel={t('settings.gymProfile.name')}
           returnKeyType="done"
           onSubmitEditing={() => void save()}
         />
       </Field>
       <Button
-        label="Save"
+        label={t('common.save')}
         variant="ink"
         onPress={() => void save()}
         busy={busy === 'save'}
       />
       <AppText variant="caption" color="ink3" style={s.note}>
-        The photo stays on this phone only. It is not included in backups or
-        exports. The name is.
+        {t('settings.gymProfile.note')}
       </AppText>
     </ScrollView>
   );

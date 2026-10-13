@@ -1,6 +1,7 @@
 import React from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useT } from '../../i18n';
 import { useStyles } from '../../theme/ThemeProvider';
 import type { Theme } from '../../theme/tokens';
 import { AppText } from './AppText';
@@ -19,10 +20,11 @@ export function Sheet({
 }) {
   const s = useStyles(styles);
   const insets = useSafeAreaInsets();
+  const { t } = useT();
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
       <KeyboardAvoidingView style={s.wrap} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <Pressable style={s.scrim} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close" />
+        <Pressable style={s.scrim} onPress={onClose} accessibilityRole="button" accessibilityLabel={t('common.close')} />
         <View style={[s.sheet, { paddingBottom: insets.bottom + 18 }]} accessibilityViewIsModal>
           <View style={s.grab} />
           {title ? (

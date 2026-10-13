@@ -39,8 +39,37 @@ Dependency direction: `features → store/app → application → domain`; `infr
 ## Weekly plan and gym profile
 
 - **Plan** (`application/plan/PlanService.ts`, migration 003): `plan_settings` holds the week-start day; `plan_days` has one row per planned weekday, either a rest day or a link to a routine. A training day's exercises are a routine, so they reuse the routine editor, targets and reordering. Deleting a routine leaves its day "not planned" (`ON DELETE SET NULL`).
-- **Gym profile**: the name and the photo's file name live in settings. The photo is cropped to 16:9 by react-native-image-crop-picker and copied into the app's private documents folder (`infrastructure/gym-photo`). Only the file name is stored, because the iOS documents path changes between installs.
+- **Gym profile**: the name and the photo's file name live in settings. The photo is cropped to 16:9 by react-native-image-crop-picker and copied into the app's private documents folder (`infrastructure/photos`). Only the file name is stored, because the iOS documents path changes between installs.
 - **Backups**: the plan travels as an optional `plan` section (older files without it stay valid) and merges as one unit, newest wins. The gym name is a backed-up preference. The photo is not backed up or exported.
+
+## Where workouts are kept
+
+`AppSettings.storagePolicy`:
+
+- `phone_and_drive` (default): finished workouts stay on the phone, optionally trimmed by `localRetentionMonths`.
+- `drive_only`: after each verified backup, every finished workout the snapshot holds unchanged is removed from the phone. Choosing it requires a Drive connection and turns automatic backup on. The workout in progress always stays on the phone.
+
+Removed workouts are recorded in `pruned_workouts`. History links to **Older workouts in your Drive**, which downloads the backup and lists the workouts the phone no longer has. The list is read-only and writes nothing locally (`BackupService.driveOnlyWorkouts`).
+
+## Storage full
+
+`infrastructure/storageErrors.ts` recognises "disk full" from SQLite (`SQLITE_FULL`) and the file system (`ENOSPC`, iOS/Android wording) and rethrows it as `DomainError('STORAGE_FULL')`. SQLite rolls the failed transaction back, so nothing half-written remains, and the user sees a plain message. Covered in `storageErrors.test.ts` by capping `max_page_count`.
+
+## Large history
+
+`application/__tests__/largeHistory.test.ts` imports 3,000 workouts (60,000 sets, more than three years of daily training) and times every screen query. On a laptop (better-sqlite3), the import takes about 3 s, history and analytics queries take 1–35 ms, and export takes under 1 s. Charts thin long series to 60 points, keeping each slice's best value so records stay visible (`downsample` in `ProgressChart.tsx`).
+
+## Languages
+
+`src/i18n`: `t('area.key', params)` and `tn()` for plurals, with dictionaries per area in `locales/en` and `locales/hi`. The Hindi files are typed against the English ones, so a missing key fails `tsc`, and a test checks that placeholders match. `AppSettings.language` is `system | en | hi`; `system` reads the phone's language through `Intl` (no native module). Services throw English `DomainError` messages; `translateError` maps them to Hindi by exact text, with a per-code fallback. Dates and numbers use `hi-IN` for Hindi and the phone's own locale for English. Exercise names, instructions and user data are not translated.
+
+## Motion
+
+Motion uses React Native's `Animated` and `LayoutAnimation` (no Reanimated): rows animate in and out of the active workout, the set check pops, toasts slide in, and loading skeletons pulse. `hooks/useReducedMotion.ts` follows the OS "Reduce motion" setting and turns all of it off.
+
+## Launch screen
+
+`scripts/generate-icons.mjs` draws the plate logo and writes the app icons and the launch logo (iOS `SplashLogo` image set, Android `drawable-*/splash_logo.png`). iOS uses `LaunchScreen.storyboard`. Android 12+ uses the system splash (`values-v31/styles.xml`); older versions use the window background (`drawable/launch_screen.xml`). The first JS frame continues the amber screen until the database is open.
 
 ## Backup
 
@@ -90,16 +119,15 @@ Left out on purpose:
 
 - **Notification libraries:** rest timers alert in-app only, by decision. This avoids Expo modules (this is a bare React Native app) and custom native code; Notifee has been unmaintained since December 2024.
 - **Keychain:** no credentials are stored.
-- **Reanimated:** motion is limited to native transitions for now.
+- **Reanimated:** the few animations use `Animated` and `LayoutAnimation`.
 
 ## Known limitations
 
 - **Google sign-in needs your OAuth client IDs.** See [GOOGLE_SETUP.md](GOOGLE_SETUP.md). Sign-in and Drive are tested against fakes, not against a live Google account.
-- **No exercise images.** Their provenance is unverified; see [EXERCISE_IMAGES.md](EXERCISE_IMAGES.md).
+- **No bundled exercise images.** Their provenance is unverified; see [EXERCISE_IMAGES.md](EXERCISE_IMAGES.md). Each exercise shows an original muscle map, and you can add your own photo.
 - **Rest timer alerts only while the app is open (by decision).** The timer runs on an end timestamp, so coming back late shows the rest as over and vibrates at once.
-- **No "drive only" storage mode.** Only the phone-plus-Drive policy exists; the type is ready for a strict cloud-only policy added later as an explicit choice.
-- **Pruned workouts are viewable only after a restore.** Older workouts removed by retention are not viewable in the app until restored from Drive.
-- **Finished workouts can't gain exercises.** Exercises cannot be added to a finished workout (sets, values, order, names and notes can be edited).
+- **Drive-only workouts are read-only.** They can be browsed online but not edited, and they don't count in Progress until restored.
+- **Hindi covers the app's own text.** Exercise names and instructions stay in English.
 - **History PR badges count current records.** The badge shows records the workout still holds, so it can drop when a later workout beats one.
-- **End-to-end coverage:** five Maestro flows pass on Release builds on the iOS 26.5 simulator and an Android emulator.
+- **End-to-end coverage:** nine Maestro flows, run on Release builds on the iOS 26.5 simulator and an Android emulator.
 - **No on-device checks yet.** No performance profiling on real devices, and no full VoiceOver or TalkBack pass.

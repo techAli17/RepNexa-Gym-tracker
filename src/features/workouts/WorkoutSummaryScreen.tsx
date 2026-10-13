@@ -5,23 +5,17 @@ import { useActiveWorkout, useSettings } from '../../app/AppContext';
 import type { RootScreenProps } from '../../app/navigation/types';
 import { AppText } from '../../components/common/AppText';
 import { Button } from '../../components/common/Button';
-import type { RecordType } from '../../domain/models';
+import { useT } from '../../i18n';
 import { useStyles } from '../../theme/ThemeProvider';
 import type { Theme } from '../../theme/tokens';
 import { formatDuration, formatVolume, formatWeight } from '../../utils/format';
-
-const RECORD_LABEL: Record<RecordType, string> = {
-  e1rm: 'Best estimated 1-rep max',
-  max_weight: 'Heaviest weight',
-  max_reps: 'Most reps in a set',
-  best_set_volume: 'Best set volume',
-};
 
 export function WorkoutSummaryScreen({ navigation }: RootScreenProps<'WorkoutSummary'>) {
   const summary = useActiveWorkout(s => s.lastSummary);
   const unit = useSettings(s => s.settings.weightUnit);
   const insets = useSafeAreaInsets();
   const s = useStyles(styles);
+  const { t } = useT();
 
   useEffect(() => {
     if (!summary) navigation.goBack();
@@ -31,7 +25,7 @@ export function WorkoutSummaryScreen({ navigation }: RootScreenProps<'WorkoutSum
   return (
     <ScrollView style={s.screen} contentContainerStyle={[s.body, { paddingBottom: insets.bottom + 24 }]}>
       <AppText variant="title" style={s.center} accessibilityRole="header">
-        Workout complete
+        {t('workout.summary.complete')}
       </AppText>
       <AppText color="ink2" style={s.center}>
         {summary.detail.workout.name}
@@ -39,13 +33,13 @@ export function WorkoutSummaryScreen({ navigation }: RootScreenProps<'WorkoutSum
       <AppText style={[s.center, s.big]}>{formatDuration(summary.durationMs)}</AppText>
 
       <View style={s.grid}>
-        <Stat value={formatVolume(summary.volumeKg, unit)} label={`Volume, ${unit}`} />
-        <Stat value={String(summary.completedSets)} label="Sets done" divider />
-        <Stat value={String(summary.improvements.length)} label="Records" divider />
+        <Stat value={formatVolume(summary.volumeKg, unit)} label={t('workout.volumeUnit', { unit })} />
+        <Stat value={String(summary.completedSets)} label={t('workout.setsDone')} divider />
+        <Stat value={String(summary.improvements.length)} label={t('workout.summary.records')} divider />
       </View>
 
       <AppText variant="heading" style={s.h}>
-        Personal records
+        {t('workout.summary.personalRecords')}
       </AppText>
       {summary.improvements.length ? (
         summary.improvements.map(i => (
@@ -53,7 +47,7 @@ export function WorkoutSummaryScreen({ navigation }: RootScreenProps<'WorkoutSum
             <View style={s.prText}>
               <AppText variant="label">{i.exerciseName}</AppText>
               <AppText variant="caption" color="ink3">
-                {RECORD_LABEL[i.recordType]}
+                {t(`workout.summary.record.${i.recordType}`)}
               </AppText>
             </View>
             <AppText variant="number" color="accent">
@@ -62,13 +56,13 @@ export function WorkoutSummaryScreen({ navigation }: RootScreenProps<'WorkoutSum
           </View>
         ))
       ) : (
-        <AppText color="ink2">No new records this time. Showing up is what builds them.</AppText>
+        <AppText color="ink2">{t('workout.summary.noRecords')}</AppText>
       )}
 
       <AppText variant="caption" color="ink3" style={s.saved}>
-        Saved on this phone.
+        {t('workout.summary.saved')}
       </AppText>
-      <Button label="Done" variant="ink" onPress={() => navigation.goBack()} />
+      <Button label={t('common.done')} variant="ink" onPress={() => navigation.goBack()} />
     </ScrollView>
   );
 }

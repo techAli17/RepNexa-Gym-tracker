@@ -35,10 +35,13 @@ export function workoutDurationMs(
   return Math.max(0, end - w.startedAt - w.pausedDurationMs);
 }
 
-/** Monday 00:00 local time of the week containing `ts`. */
-export function startOfWeek(ts: Timestamp): Timestamp {
+/**
+ * 00:00 local time on the first day of the week containing `ts`.
+ * `weekStart` uses Date#getDay(): 0 = Sunday … 6 = Saturday (default Monday).
+ */
+export function startOfWeek(ts: Timestamp, weekStart = 1): Timestamp {
   const d = new Date(ts);
   d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  d.setDate(d.getDate() - ((d.getDay() - weekStart + 7) % 7));
   return d.getTime();
 }

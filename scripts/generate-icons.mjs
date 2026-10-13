@@ -16,9 +16,10 @@ const AMBER = [0xf2, 0xa9, 0x3b];
 const INK = [0x24, 0x16, 0x00];
 
 /** Colour at a point in unit space (0..1), or null for transparent. */
-function sample(x, y, { round }) {
-  const cx = x - 0.5;
-  const cy = y - 0.5;
+function sample(x, y, { round, logo = false, zoom = 1 }) {
+  // `logo`: the plate alone on transparent, for launch screens; `zoom` scales it up.
+  const cx = (x - 0.5) / zoom;
+  const cy = (y - 0.5) / zoom;
   const r = Math.hypot(cx, cy);
   if (round && r > 0.5) return null;
   // Plate: outer rim, a groove, the face, then the hub with its bar hole.
@@ -35,7 +36,7 @@ function sample(x, y, { round }) {
       if (d < 0.32) return INK;
     }
   }
-  return AMBER;
+  return logo ? null : AMBER;
 }
 
 function render(size, opts) {
@@ -141,6 +142,37 @@ write(join(IOS_DIR, 'Contents.json'), Buffer.from(JSON.stringify({ images, info:
 for (const [dir, px] of [['mdpi', 48], ['hdpi', 72], ['xhdpi', 96], ['xxhdpi', 144], ['xxxhdpi', 192]]) {
   write(`android/app/src/main/res/mipmap-${dir}/ic_launcher.png`, render(px, { round: false }));
   write(`android/app/src/main/res/mipmap-${dir}/ic_launcher_round.png`, render(px, { round: true }));
+}
+
+// Android 8+ adaptive icon: the plate on a 108dp transparent foreground over an amber
+// colour background. Without this, launchers box the legacy PNG in a white circle.
+// The plate stays inside the 66dp safe zone; the same layer doubles as the themed-icon mask.
+for (const [dir, f] of [['mdpi', 1], ['hdpi', 1.5], ['xhdpi', 2], ['xxhdpi', 3], ['xxxhdpi', 4]]) {
+  write(`android/app/src/main/res/mipmap-${dir}/ic_launcher_foreground.png`, render(Math.round(108 * f), { logo: true, zoom: 0.72 }));
+}
+const adaptive = Buffer.from(`<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ic_launcher_background" />
+    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+    <monochrome android:drawable="@mipmap/ic_launcher_foreground" />
+</adaptive-icon>
+`);
+write('android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml', adaptive);
+write('android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml', adaptive);
+
+// Launch screens: the plate alone (ink on transparent) over an amber background.
+// iOS image set, 120pt.
+const SPLASH_DIR = 'ios/RepNexa/Images.xcassets/SplashLogo.imageset';
+const splashImages = [];
+for (const scale of [1, 2, 3]) {
+  const file = `splash-logo@${scale}x.png`;
+  write(join(SPLASH_DIR, file), render(120 * scale, { logo: true, zoom: 1.45 }));
+  splashImages.push({ filename: file, idiom: 'universal', scale: `${scale}x` });
+}
+write(join(SPLASH_DIR, 'Contents.json'), Buffer.from(JSON.stringify({ images: splashImages, info: { author: 'xcode', version: 1 } }, null, 2) + '\n'));
+// Android: 288dp canvas (the Android 12+ splash icon size, masked to the inner 192dp circle).
+for (const [dir, f] of [['mdpi', 1], ['hdpi', 1.5], ['xhdpi', 2], ['xxhdpi', 3], ['xxxhdpi', 4]]) {
+  write(`android/app/src/main/res/drawable-${dir}/splash_logo.png`, render(Math.round(288 * f), { logo: true, zoom: 0.95 }));
 }
 
 console.log('Icons written.');

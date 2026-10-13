@@ -1,0 +1,56 @@
+import type { common as en } from '../en/common';
+import type { Translation } from '../../types';
+
+export const common: Translation<typeof en> = {
+  cancel: 'रद्द करें',
+  done: 'हो गया',
+  save: 'सेव करें',
+  delete: 'हटाएँ',
+  remove: 'हटाएँ',
+  edit: 'बदलें',
+  close: 'बंद करें',
+  retry: 'फिर से कोशिश करें',
+  ok: 'ठीक है',
+  durationHM: '{h} घं {m} मिनट',
+  durationM: '{m} मिनट',
+  unexpectedError: 'कुछ गड़बड़ हो गई। आपके दर्ज किए गए सेट सुरक्षित हैं।',
+  weekday: { 0: 'रविवार', 1: 'सोमवार', 2: 'मंगलवार', 3: 'बुधवार', 4: 'गुरुवार', 5: 'शुक्रवार', 6: 'शनिवार' },
+  weekdayShort: { 0: 'रवि', 1: 'सोम', 2: 'मंगल', 3: 'बुध', 4: 'गुरु', 5: 'शुक्र', 6: 'शनि' },
+  muscleGroup: {
+    chest: 'छाती',
+    back: 'पीठ',
+    legs: 'पैर',
+    shoulders: 'कंधे',
+    arms: 'बाजू',
+    core: 'कोर',
+    full_body: 'पूरा शरीर',
+    cardio: 'कार्डियो',
+  },
+  equipment: {
+    barbell: 'बारबेल',
+    dumbbell: 'डम्बल',
+    machine: 'मशीन',
+    cable: 'केबल',
+    bodyweight: 'बॉडीवेट',
+    kettlebell: 'केटलबेल',
+    band: 'बैंड',
+    other: 'अन्य',
+  },
+  trackingType: {
+    weight_reps: 'वज़न × रेप्स',
+    bodyweight_reps: 'बॉडीवेट रेप्स',
+    duration: 'समय',
+    distance_duration: 'दूरी + समय',
+  },
+  language: {
+    label: 'भाषा',
+    system: 'फ़ोन की सेटिंग',
+    en: 'English',
+    hi: 'हिन्दी',
+  },
+  loading: 'लोड हो रहा है',
+  app: {
+    schemaTooNew: 'आपका डेटा RepNexa के नए वर्शन से सेव हुआ है। इसे खोलने के लिए ऐप अपडेट करें।',
+    openFailed: 'RepNexa अपना डेटाबेस नहीं खोल पाया। आपके डेटा में कोई बदलाव नहीं हुआ है।',
+  },
+};

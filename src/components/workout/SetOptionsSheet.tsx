@@ -1,18 +1,12 @@
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { SET_TYPES, type SetType, type WorkoutSet } from '../../domain/models';
+import { SET_TYPES, type WorkoutSet } from '../../domain/models';
+import { useT } from '../../i18n';
 import { useStyles } from '../../theme/ThemeProvider';
 import type { Theme } from '../../theme/tokens';
 import { AppText } from '../common/AppText';
 import { Button } from '../common/Button';
 import { Sheet } from '../common/Sheet';
-
-const TYPE_LABEL: Record<SetType, [string, string]> = {
-  normal: ['Working set', 'Counts toward volume and records'],
-  warmup: ['Warm-up', 'Excluded from volume and records'],
-  drop: ['Drop set', 'A lighter set straight after the last'],
-  failure: ['To failure', 'No reps left in the tank'],
-};
 
 const RPE_VALUES = [6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10];
 
@@ -27,12 +21,13 @@ export function SetOptionsSheet({
   onChange: (patch: Partial<WorkoutSet>) => void;
 }) {
   const s = useStyles(styles);
+  const { t } = useT();
   return (
-    <Sheet visible={!!set} onClose={onClose} title="Set options">
+    <Sheet visible={!!set} onClose={onClose} title={t('workout.options.title')}>
       {set ? (
         <>
           <AppText variant="label" color="ink3" style={s.h}>
-            Type
+            {t('workout.options.type')}
           </AppText>
           <View accessibilityRole="radiogroup">
             {SET_TYPES.map(type => {
@@ -47,9 +42,9 @@ export function SetOptionsSheet({
                 >
                   <View style={[s.radio, on && s.radioOn]} />
                   <View style={s.flex}>
-                    <AppText variant="label">{TYPE_LABEL[type][0]}</AppText>
+                    <AppText variant="label">{t(`workout.options.types.${type}.name`)}</AppText>
                     <AppText variant="caption" color="ink3">
-                      {TYPE_LABEL[type][1]}
+                      {t(`workout.options.types.${type}.desc`)}
                     </AppText>
                   </View>
                 </Pressable>
@@ -60,15 +55,15 @@ export function SetOptionsSheet({
             RPE
           </AppText>
           <AppText variant="caption" color="ink3">
-            How hard the set felt. 10 means nothing left; 8 means about two more reps were possible.
+            {t('workout.options.rpeHelp')}
           </AppText>
           <View style={s.rpeRow} accessibilityRole="radiogroup" accessibilityLabel="RPE">
-            <RpeChip label="None" on={set.rpe == null} onPress={() => onChange({ rpe: null })} />
+            <RpeChip label={t('workout.options.none')} on={set.rpe == null} onPress={() => onChange({ rpe: null })} />
             {RPE_VALUES.map(v => (
               <RpeChip key={v} label={String(v)} on={set.rpe === v} onPress={() => onChange({ rpe: v })} />
             ))}
           </View>
-          <Button label="Done" variant="ink" onPress={onClose} style={s.done} />
+          <Button label={t('common.done')} variant="ink" onPress={onClose} style={s.done} />
         </>
       ) : null}
     </Sheet>

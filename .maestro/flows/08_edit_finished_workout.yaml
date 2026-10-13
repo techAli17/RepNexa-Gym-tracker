@@ -1,0 +1,48 @@
+appId: ${APP_ID || "com.repnexa"}
+name: Add an exercise to a finished workout from History
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: ".*Start empty workout"
+    timeout: 60000
+# A short finished workout to edit.
+- tapOn: ".*Start empty workout"
+- tapOn: ".*Add exercise"
+- tapOn: "Search exercises"
+- inputText: "bench"
+- tapOn: "Bench Press.*"
+- tapOn: "Set 1, weight in kg"
+- inputText: "100"
+- tapOn: "Set 1, reps"
+- inputText: "5"
+- tapOn: "Set 1 done"
+- tapOn: "Skip rest"
+- tapOn: "Finish"
+- tapOn:
+    text: "Finish|FINISH"
+    below: "Finish workout\\?"
+- assertVisible: "Workout complete"
+- tapOn: "Done"
+# Open it from History and add a forgotten exercise.
+- tapOn: "History(, tab.*)?"
+- tapOn: ".*500 kg.*1 sets.*"
+- tapOn: "Edit"
+- tapOn: "+ Add exercise"
+- tapOn: "Search exercises"
+- inputText: "squat"
+- tapOn: "Back Squat.*"
+- tapOn:
+    text: "Set 1, weight in kg"
+    index: 1
+- inputText: "120"
+- tapOn:
+    text: "Set 1, reps"
+    index: 1
+- inputText: "5"
+- tapOn:
+    text: "Set 1 done"
+    index: 1
+- tapOn: "Done"
+- assertVisible: "Back Squat"
+- assertVisible: "1,100|1100"     # volume: 100 × 5 + 120 × 5

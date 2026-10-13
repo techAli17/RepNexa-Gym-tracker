@@ -4,6 +4,7 @@ import { useActiveWorkout } from '../../app/AppContext';
 import { useNow } from '../../hooks/useNow';
 import { useStyles, useTheme } from '../../theme/ThemeProvider';
 import type { Theme } from '../../theme/tokens';
+import { useT } from '../../i18n';
 import { formatClock } from '../../utils/format';
 import { AppText } from '../common/AppText';
 
@@ -18,7 +19,8 @@ export function RestTimerBar() {
   const clear = useActiveWorkout(s => s.clearRest);
   const now = useNow(250, rest != null);
   const s = useStyles(styles);
-  const t = useTheme();
+  const theme = useTheme();
+  const { t } = useT();
   const fired = useRef<number | null>(null);
 
   const left = rest ? Math.max(0, rest.endsAt - now) : 0;
@@ -26,28 +28,28 @@ export function RestTimerBar() {
     if (rest && left <= 0 && fired.current !== rest.endsAt) {
       fired.current = rest.endsAt;
       Vibration.vibrate([0, 60, 80, 60]);
-      AccessibilityInfo.announceForAccessibility('Rest over. Time for your next set.');
+      AccessibilityInfo.announceForAccessibility(t('workout.rest.over'));
       clear();
     }
-  }, [rest, left, clear]);
+  }, [rest, left, clear, t]);
 
   if (!rest) return null;
   const fraction = Math.min(1, left / (rest.totalSeconds * 1000));
 
   return (
-    <View style={s.bar} accessibilityLabel={`Rest timer, ${formatClock(left)} left`}>
+    <View style={s.bar} accessibilityLabel={t('workout.rest.left', { time: formatClock(left) })}>
       <View style={s.main}>
         <AppText variant="caption" style={s.dim}>
-          Rest
+          {t('workout.rest.label')}
         </AppText>
         <AppText style={s.clock}>{formatClock(left)}</AppText>
         <View style={s.track}>
-          <View style={[s.fill, { width: `${fraction * 100}%`, backgroundColor: t.colors.amber }]} />
+          <View style={[s.fill, { width: `${fraction * 100}%`, backgroundColor: theme.colors.amber }]} />
         </View>
       </View>
-      <Pill label="−15" a11y="Subtract 15 seconds" onPress={() => adjust(-15)} />
-      <Pill label="+15" a11y="Add 15 seconds" onPress={() => adjust(15)} />
-      <Pill label="Skip" a11y="Skip rest" onPress={clear} strong />
+      <Pill label="−15" a11y={t('workout.rest.minus15')} onPress={() => adjust(-15)} />
+      <Pill label="+15" a11y={t('workout.rest.plus15')} onPress={() => adjust(15)} />
+      <Pill label={t('workout.rest.skip')} a11y={t('workout.rest.skipA11y')} onPress={clear} strong />
     </View>
   );
 }

@@ -79,6 +79,7 @@ describe('migrations', () => {
         'personal_records',
         'app_settings',
         'backup_state',
+        'exercise_photos',
       ]),
     );
     expect(await getSchemaVersion(db)).toBe(LATEST_SCHEMA_VERSION);

@@ -104,6 +104,17 @@ describe('volume and duration', () => {
     const sun = new Date(2026, 9, 11, 23, 0).getTime();
     expect(startOfWeek(sun)).toBe(mon.getTime());
   });
+
+  it('starts weeks on the chosen day', () => {
+    const wed = new Date(2026, 9, 7, 15, 30).getTime();
+    expect(new Date(startOfWeek(wed, 0)).getDate()).toBe(4); // Sunday 4 Oct
+    expect(new Date(startOfWeek(wed, 6)).getDate()).toBe(3); // Saturday 3 Oct
+    expect(new Date(startOfWeek(wed, 3)).getDate()).toBe(7); // the day itself
+    expect(new Date(startOfWeek(wed, 4)).getDate()).toBe(1); // Thursday 1 Oct
+    const sunday = new Date(2026, 9, 4, 8).getTime();
+    expect(startOfWeek(sunday, 0)).toBe(new Date(2026, 9, 4).getTime());
+    expect(new Date(startOfWeek(sunday, 1)).getDate()).toBe(28); // Monday 28 Sep
+  });
 });
 
 describe('personal records', () => {

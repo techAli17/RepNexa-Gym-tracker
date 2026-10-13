@@ -14,6 +14,7 @@ import { flushPendingNumberFields } from '../../components/workout/NumberField';
 import { RestPickerSheet } from '../../components/workout/RestPickerSheet';
 import { RestTimerBar } from '../../components/workout/RestTimerBar';
 import { SetOptionsSheet } from '../../components/workout/SetOptionsSheet';
+import { useT } from '../../i18n';
 import { completedSetCount, workoutVolumeKg } from '../../domain/calculations';
 import type { WorkoutExerciseDetail } from '../../domain/models';
 import { toastError } from '../../store/toastStore';
@@ -29,7 +30,8 @@ export function WorkoutScreen({ navigation }: RootScreenProps<'Workout'>) {
   const defaultRest = useSettings(s => s.settings.defaultRestSeconds);
   const insets = useSafeAreaInsets();
   const s = useStyles(styles);
-  const t = useTheme();
+  const theme = useTheme();
+  const { t, tn } = useT();
   const [finishing, setFinishing] = useState(false);
   const finishingRef = useRef(false);
   const [optionsSetId, setOptionsSetId] = useState<string | null>(null);
@@ -59,16 +61,16 @@ export function WorkoutScreen({ navigation }: RootScreenProps<'Workout'>) {
       removeSet: id => void run(a.removeSet(id)),
       move: (id, dir) => void run(a.moveExercise(id, dir)),
       remove: (id, name) =>
-        Alert.alert(`Remove ${name}?`, 'Its sets in this workout will be deleted.', [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Remove', style: 'destructive', onPress: () => void run(a.removeExercise(id)) },
+        Alert.alert(t('workout.removeExerciseTitle', { name }), t('workout.removeExerciseMessage'), [
+          { text: t('common.cancel'), style: 'cancel' },
+          { text: t('common.remove'), style: 'destructive', onPress: () => void run(a.removeExercise(id)) },
         ]),
       replace: (id, exerciseId) => navigation.navigate('ExercisePicker', { mode: 'replace', workoutExerciseId: id, exerciseId }),
       editRest: (id, current) => setRestFor({ id, current }),
       saveNotes: (id, text) => void run(a.setExerciseNotes(id, text)),
       openInfo: exerciseId => navigation.navigate('ExerciseDetail', { id: exerciseId }),
     };
-  }, [store, navigation]);
+  }, [store, navigation, t]);
 
   const finish = useCallback(() => {
     if (!detail || finishingRef.current) return;
@@ -90,23 +92,23 @@ export function WorkoutScreen({ navigation }: RootScreenProps<'Workout'>) {
     };
     if (unchecked > 0) {
       Alert.alert(
-        'Finish workout?',
-        `${unchecked} unchecked ${unchecked === 1 ? 'set' : 'sets'} will be left out. Checked sets are saved.`,
+        t('workout.finishTitle'),
+        tn('workout.uncheckedSets', unchecked),
         [
-          { text: 'Keep going', style: 'cancel' },
-          { text: 'Finish', onPress: () => void go() },
+          { text: t('workout.keepGoing'), style: 'cancel' },
+          { text: t('workout.finish'), onPress: () => void go() },
         ],
       );
     } else {
       void go();
     }
-  }, [detail, store, navigation]);
+  }, [detail, store, navigation, t, tn]);
 
   const discard = useCallback(() => {
-    Alert.alert('Discard this workout?', 'The sets you logged in this workout will be deleted.', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('workout.discardTitle'), t('workout.discardMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Discard',
+        text: t('workout.discard'),
         style: 'destructive',
         onPress: async () => {
           try {
@@ -118,7 +120,7 @@ export function WorkoutScreen({ navigation }: RootScreenProps<'Workout'>) {
         },
       },
     ]);
-  }, [store, navigation]);
+  }, [store, navigation, t]);
 
   const renderItem = useCallback(
     ({ item, index }: { item: WorkoutExerciseDetail; index: number }) => (
@@ -138,7 +140,7 @@ export function WorkoutScreen({ navigation }: RootScreenProps<'Workout'>) {
   if (!detail) {
     return (
       <View style={[s.screen, { paddingTop: insets.top + 40 }]}>
-        <EmptyState title="No workout in progress" actionLabel="Back" onAction={() => navigation.goBack()} />
+        <EmptyState title={t('workout.noWorkout')} actionLabel={t('workout.back')} onAction={() => navigation.goBack()} />
       </View>
     );
   }
@@ -154,36 +156,36 @@ export function WorkoutScreen({ navigation }: RootScreenProps<'Workout'>) {
           onPress={() => navigation.goBack()}
           style={s.iconBtn}
           accessibilityRole="button"
-          accessibilityLabel="Minimize workout"
-          accessibilityHint="The workout keeps running. Resume it from Home."
+          accessibilityLabel={t('workout.minimize')}
+          accessibilityHint={t('workout.minimizeHint')}
         >
           <Icon name="chevronDown" />
         </Pressable>
-        <Pressable style={s.titleBtn} onPress={() => setRenaming(true)} accessibilityRole="button" accessibilityHint="Rename the workout">
+        <Pressable style={s.titleBtn} onPress={() => setRenaming(true)} accessibilityRole="button" accessibilityHint={t('workout.renameHint')}>
           <AppText variant="title" numberOfLines={1} accessibilityRole="header">
             {w.name}
           </AppText>
         </Pressable>
-        <Button label="Finish" onPress={finish} busy={finishing} compact />
+        <Button label={t('workout.finish')} onPress={finish} busy={finishing} compact />
       </View>
 
       <View style={s.strip}>
         <View style={s.stat}>
           <ElapsedClock workout={w} />
           <AppText variant="caption" color={paused ? 'accent' : 'ink3'}>
-            {paused ? 'Paused' : 'Duration'}
+            {paused ? t('workout.paused') : t('workout.duration')}
           </AppText>
         </View>
         <View style={[s.stat, s.statDivider]}>
           <AppText variant="number">{formatVolume(workoutVolumeKg(detail), unit)}</AppText>
           <AppText variant="caption" color="ink3">
-            Volume, {unit}
+            {t('workout.volumeUnit', { unit })}
           </AppText>
         </View>
         <View style={[s.stat, s.statDivider]}>
           <AppText variant="number">{completedSetCount(detail)}</AppText>
           <AppText variant="caption" color="ink3">
-            Sets done
+            {t('workout.setsDone')}
           </AppText>
         </View>
       </View>
@@ -197,32 +199,32 @@ export function WorkoutScreen({ navigation }: RootScreenProps<'Workout'>) {
         keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
         automaticallyAdjustKeyboardInsets
         removeClippedSubviews={false}
-        ListEmptyComponent={<EmptyState title="Add your first exercise" message="Pick from the library or create your own." />}
+        ListEmptyComponent={<EmptyState title={t('workout.emptyTitle')} message={t('workout.emptyMessage')} />}
         ListFooterComponent={
           <View style={s.footer}>
             <AppText variant="caption" color="ink3">
-              Tap a set number to change its type. Long-press it to set RPE.
+              {t('workout.tip')}
             </AppText>
-            <Button label="+ Add exercise" variant="ghost" onPress={() => navigation.navigate('ExercisePicker', { mode: 'add' })} />
+            <Button label={t('workout.addExercise')} variant="ghost" onPress={() => navigation.navigate('ExercisePicker', { mode: 'add' })} />
             <TextInput
               value={notes}
               onChangeText={setNotes}
               onEndEditing={() => {
                 if (notes !== (w.notes ?? '')) void store.getState().setNotes(notes).catch(toastError);
               }}
-              placeholder="Workout notes"
-              placeholderTextColor={t.colors.ink3}
-              accessibilityLabel="Workout notes"
+              placeholder={t('workout.notes')}
+              placeholderTextColor={theme.colors.ink3}
+              accessibilityLabel={t('workout.notes')}
               multiline
               maxLength={2000}
               style={s.notes}
             />
             <Button
-              label={paused ? 'Resume workout' : 'Pause workout'}
+              label={paused ? t('workout.resume') : t('workout.pause')}
               variant="outline"
               onPress={() => void (paused ? store.getState().resume() : store.getState().pause()).catch(toastError)}
             />
-            <Button label="Discard workout" variant="dangerText" onPress={discard} />
+            <Button label={t('workout.discardWorkout')} variant="dangerText" onPress={discard} />
           </View>
         }
       />
@@ -249,7 +251,7 @@ export function WorkoutScreen({ navigation }: RootScreenProps<'Workout'>) {
       />
       <TextPrompt
         visible={renaming}
-        title="Workout name"
+        title={t('workout.nameTitle')}
         initial={w.name}
         onCancel={() => setRenaming(false)}
         onSubmit={name => {

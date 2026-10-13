@@ -1,0 +1,25 @@
+appId: ${APP_ID || "com.repnexa"}
+name: Switch the app to Hindi and back
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: ".*Start empty workout"
+    timeout: 60000
+- tapOn: "Settings(, tab.*)?"
+- scrollUntilVisible:
+    element: "हिन्दी"
+    direction: DOWN
+- tapOn: "हिन्दी"
+# Tabs, titles and Home follow at once, without a restart.
+- assertVisible: "भाषा"
+- tapOn: "होम(, tab.*)?"
+- assertVisible: ".*खाली वर्कआउट शुरू करें"
+- tapOn: "सेटिंग(, tab.*)?"
+- scrollUntilVisible:
+    element: "English"
+    direction: DOWN
+- tapOn: "English"
+- assertVisible: "Language"
+- tapOn: "Home(, tab.*)?"
+- assertVisible: ".*Start empty workout"

@@ -9,6 +9,7 @@ import { GoogleAuthGateway } from '../infrastructure/google-auth/GoogleAuthGatew
 import { LOCAL_OWNER, ownerForAccount } from '../infrastructure/database/metaStore';
 import { openAppDatabase, openMetaStore } from '../infrastructure/database/openDatabase';
 import { SchemaTooNewError } from '../infrastructure/database/migrations';
+import { I18nProvider, t, tn, useT } from '../i18n';
 import { toast, toastError } from '../store/toastStore';
 import { ThemeProvider, useTheme } from '../theme/ThemeProvider';
 import { AppContextProvider, type AccountActions } from './AppContext';
@@ -43,9 +44,7 @@ export default function App() {
       setStatus({
         state: 'error',
         message:
-          e instanceof SchemaTooNewError
-            ? 'Your data was saved by a newer version of RepNexa. Update the app to open it.'
-            : 'RepNexa could not open its database. Your data has not been changed.',
+          e instanceof SchemaTooNewError ? t('common.app.schemaTooNew') : t('common.app.openFailed'),
       });
     }
   }, []);
@@ -86,18 +85,18 @@ export default function App() {
         await s.scheduler.refresh();
         if (granted) {
           const out = await s.scheduler.runNow();
-          if (out) toast('Backed up to your Drive');
+          if (out) toast(t('backup.account.backedUp'));
         }
       },
       async signOut() {
         await auth.signOut();
         await open(LOCAL_OWNER);
-        toast('Signed out. Your workouts stay on this phone for your next sign-in.');
+        toast(t('backup.account.signedOut'));
       },
       async disconnect() {
         await auth.revoke();
         await open(LOCAL_OWNER);
-        toast('RepNexa’s access to your Google account was removed.');
+        toast(t('backup.account.disconnected'));
       },
       async wipeLocal() {
         const s = sessionRef.current;
@@ -107,7 +106,7 @@ export default function App() {
         // Reopen just to delete: destroy() removes the whole file.
         openAppDatabase(s.owner).destroy();
         await open(s.owner);
-        toast('Data on this phone deleted');
+        toast(t('backup.account.wiped'));
       },
     }),
     [open],
@@ -131,18 +130,18 @@ function offerCarry(session: Session, carry: NonNullable<Carry>) {
   void session.services.history.list({ limit: 1 }).then(existing => {
     if (existing.length) return; // the account already has history; never mix silently
     Alert.alert(
-      'Keep your workouts?',
-      `${carry.count} ${carry.count === 1 ? 'workout' : 'workouts'} logged before you signed in can be added to this account and backed up.`,
+      t('backup.carry.title'),
+      tn('backup.carry.message', carry.count),
       [
-        { text: 'Not now', style: 'cancel' },
+        { text: t('backup.carry.notNow'), style: 'cancel' },
         {
-          text: 'Add them',
+          text: t('backup.carry.add'),
           onPress: async () => {
             try {
               const preview = await session.services.backup.previewImport(carry.json);
               await session.services.backup.applyImport(preview.file);
               await session.activeWorkout.getState().load();
-              toast('Workouts added to your account');
+              toast(t('backup.carry.added'));
             } catch (e) {
               toastError(e);
             }
@@ -155,44 +154,55 @@ function offerCarry(session: Session, carry: NonNullable<Carry>) {
 
 function Ready({ session, account }: { session: Session; account: AccountActions }) {
   const theme = useStore(session.settings, s => s.settings.theme);
+  const language = useStore(session.settings, s => s.settings.language);
   const value = useMemo(() => ({ ...session, account }), [session, account]);
   return (
     <AppContextProvider value={value}>
-      <ThemeProvider preference={theme}>
-        <ThemedStatusBar />
-        {/* Remount navigation per owner so no screen keeps another account's data. */}
-        <RootNavigator key={session.owner} />
-        <Toast />
-      </ThemeProvider>
+      <I18nProvider preference={language}>
+        <ThemeProvider preference={theme}>
+          <ThemedStatusBar />
+          {/* Remount navigation per owner (no screen keeps another account's data) and per language (headers re-read their titles). */}
+          <RootNavigator key={`${session.owner}|${language}`} />
+          <Toast />
+        </ThemeProvider>
+      </I18nProvider>
     </AppContextProvider>
   );
 }
 
 function ThemedStatusBar() {
-  const t = useTheme();
-  return <StatusBar barStyle={t.dark ? 'light-content' : 'dark-content'} />;
+  const theme = useTheme();
+  return <StatusBar barStyle={theme.dark ? 'light-content' : 'dark-content'} />;
 }
 
 function Splash({ error, onRetry }: { error: string | null; onRetry: () => void }) {
-  const t = useTheme();
+  const theme = useTheme();
+  const { t: tr } = useT();
   return (
-    <View style={[s.splash, { backgroundColor: t.colors.bg }]}>
-      <AppText variant="display">RepNexa</AppText>
+    // While loading it continues the native launch screen (amber); errors use the normal theme to stay readable.
+    <View style={[s.splash, { backgroundColor: error ? theme.colors.bg : theme.colors.amber }]}>
+      <AppText variant="display" style={!error && s.onAmber}>
+        RepNexa
+      </AppText>
       {error ? (
         <>
           <AppText color="ink2" style={s.msg}>
             {error}
           </AppText>
-          <Button label="Try again" onPress={onRetry} style={s.btn} />
+          <Button label={tr('common.retry')} onPress={onRetry} style={s.btn} />
         </>
       ) : (
-        <ActivityIndicator color={t.colors.ink3} style={s.msg} />
+        <ActivityIndicator color={LAUNCH_INK} style={s.msg} />
       )}
     </View>
   );
 }
 
+/** Matches the launch storyboard / Android splash. */
+const LAUNCH_INK = '#241600';
+
 const s = StyleSheet.create({
+  onAmber: { color: LAUNCH_INK },
   splash: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   msg: { marginTop: 16, textAlign: 'center' },
   btn: { marginTop: 20, alignSelf: 'stretch' },

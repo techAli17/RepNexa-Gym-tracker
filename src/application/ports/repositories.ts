@@ -39,6 +39,15 @@ export interface ExerciseRepository {
   softDelete(id: Uuid, at: Timestamp): Promise<void>;
 }
 
+/** File names of your own exercise photos. Kept on the phone only, never backed up. */
+export interface ExercisePhotoRepository {
+  get(exerciseId: Uuid): Promise<string | null>;
+  /** Every exercise that has a photo, keyed by exercise id. */
+  all(): Promise<Map<Uuid, string>>;
+  /** Sets or clears the photo and returns the file it replaced, if any. */
+  put(exerciseId: Uuid, fileName: string | null, at: Timestamp): Promise<string | null>;
+}
+
 export interface WorkoutListQuery {
   limit: number;
   /** Cursor: return workouts that started strictly before this time. */
@@ -192,6 +201,7 @@ export interface PlanRepository {
 
 export interface Repositories {
   exercises: ExerciseRepository;
+  exercisePhotos: ExercisePhotoRepository;
   workouts: WorkoutRepository;
   routines: RoutineRepository;
   records: PersonalRecordRepository;

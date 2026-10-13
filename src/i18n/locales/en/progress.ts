@@ -1,0 +1,38 @@
+/** Progress tab: charts, streak and personal records. */
+export const progress = {
+  range: { '30': '1M', '90': '3M', '365': '1Y', all: 'All' },
+  rangeA11y: {
+    '30': 'Last month',
+    '90': 'Last 3 months',
+    '365': 'Last year',
+    all: 'All time',
+  },
+  dateRange: 'Date range',
+  emptyTitle: 'Nothing to chart yet',
+  emptyMessage:
+    'Finish a workout and your strength, volume and records will show up here.',
+  goHome: 'Go to Home',
+  e1rmTitle: 'Estimated 1-rep max',
+  e1rmA11y: '{name}, estimated 1-rep max: {points}',
+  current: 'Current, {unit}',
+  change: 'Change',
+  sessions: 'Sessions',
+  needTwo: 'Log {name} in two workouts in this range to see a trend.',
+  thisExercise: 'this exercise',
+  e1rmNote:
+    'Estimated from your best set each session (Epley formula, sets of 12 reps or fewer). Not a tested max.',
+  weeklyVolume: 'Weekly volume',
+  weeklyVolumeA11y: 'Weekly volume: {weeks}',
+  weekOf: 'week of {date} {value}',
+  workoutsPerWeek: 'Workouts per week',
+  workoutsPerWeekA11y: 'Workouts per week: {weeks}',
+  avgPerWeek: 'Avg per week',
+  timeTrained: 'Time trained',
+  weekStreak: 'Week streak',
+  streakNote: 'A week counts toward your streak when you train at least twice.',
+  personalRecords: 'Personal records',
+  estE1rm: 'Est. 1RM',
+  heaviest: 'Heaviest',
+  mostReps: 'Most reps',
+  reps: '{reps} reps',
+};

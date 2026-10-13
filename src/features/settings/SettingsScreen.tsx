@@ -9,6 +9,7 @@ import { Card } from '../../components/common/Card';
 import { Icon } from '../../components/common/Icon';
 import type { AppSettings } from '../../domain/models';
 import { toastError } from '../../store/toastStore';
+import { useT } from '../../i18n';
 import { useStyles } from '../../theme/ThemeProvider';
 import type { Theme } from '../../theme/tokens';
 
@@ -84,31 +85,32 @@ export function SettingsScreen({ navigation }: TabScreenProps<'Settings'>) {
   const update = useSettings(s => s.update);
   const account = useBackupStatus(s => s.account);
   const s = useStyles(styles);
+  const { t } = useT();
   const set = (patch: Partial<AppSettings>) =>
     void update(patch).catch(toastError);
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.body}>
       <Card>
-        <AppText variant="heading">Account and backup</AppText>
+        <AppText variant="heading">{t('settings.accountAndBackup')}</AppText>
         <View style={s.mtSm}>
           <BackupStatus onPress={() => navigation.navigate('Backup')} />
         </View>
         <Row
-          label={account ? account.email : 'Google Drive backup'}
+          label={account ? account.email : t('settings.driveBackup')}
           detail={
             account
-              ? 'Backup, restore, export and import'
-              : 'Sign in, export and import'
+              ? t('settings.accountDetail')
+              : t('settings.signedOutDetail')
           }
           onPress={() => navigation.navigate('Backup')}
         />
       </Card>
 
       <Card style={s.mt}>
-        <AppText variant="heading">Workout</AppText>
+        <AppText variant="heading">{t('settings.workout')}</AppText>
         <Segmented
-          label="Weight unit"
+          label={t('settings.weightUnit')}
           value={settings.weightUnit}
           options={[
             ['kg', 'kg'],
@@ -117,7 +119,7 @@ export function SettingsScreen({ navigation }: TabScreenProps<'Settings'>) {
           onChange={v => set({ weightUnit: v })}
         />
         <Segmented
-          label="Default rest"
+          label={t('settings.defaultRest')}
           value={settings.defaultRestSeconds}
           options={[
             [60, '1:00'],
@@ -128,70 +130,79 @@ export function SettingsScreen({ navigation }: TabScreenProps<'Settings'>) {
           onChange={v => set({ defaultRestSeconds: v })}
         />
         <AppText variant="caption" color="ink3" style={s.note}>
-          Changing the unit converts what you see. Sets keep the unit they were
-          logged in, so nothing is rounded away.
+          {t('settings.unitNote')}
         </AppText>
         <Row
-          label="Routines"
-          detail="Create, edit and order your routines"
+          label={t('settings.routines')}
+          detail={t('settings.routinesDetail')}
           onPress={() => navigation.navigate('Routines')}
         />
         <Row
-          label="Weekly plan"
-          detail="Training and rest days, and what to train each day"
+          label={t('settings.weekPlan')}
+          detail={t('settings.weekPlanDetail')}
           onPress={() => navigation.navigate('WeekPlan')}
         />
         <Row
-          label="My gym"
+          label={t('settings.gym')}
           detail={
             settings.gymName
-              ? `${settings.gymName}${
-                  settings.gymPhotoFile ? ' · photo saved' : ''
-                }`
-              : 'Add your gym’s name and photo'
+              ? settings.gymPhotoFile
+                ? t('settings.gymWithPhoto', { name: settings.gymName })
+                : settings.gymName
+              : t('settings.gymDetail')
           }
           onPress={() => navigation.navigate('GymProfile')}
         />
       </Card>
 
       <Card style={s.mt}>
-        <AppText variant="heading">Appearance</AppText>
+        <AppText variant="heading">{t('settings.appearance')}</AppText>
         <Segmented
-          label="Theme"
+          label={t('settings.theme')}
           value={settings.theme}
           options={[
-            ['system', 'System'],
-            ['light', 'Light'],
-            ['dark', 'Dark'],
+            ['system', t('settings.themeSystem')],
+            ['light', t('settings.themeLight')],
+            ['dark', t('settings.themeDark')],
           ]}
           onChange={v => set({ theme: v })}
+        />
+        <Segmented
+          label={t('common.language.label')}
+          value={settings.language}
+          options={[
+            ['system', t('common.language.system')],
+            ['en', t('common.language.en')],
+            ['hi', t('common.language.hi')],
+          ]}
+          onChange={v => set({ language: v })}
         />
       </Card>
 
       <Card style={s.mt}>
-        <AppText variant="heading">About</AppText>
+        <AppText variant="heading">{t('settings.about')}</AppText>
         <Row
-          label="Exercise illustrations"
-          detail="Not included yet"
+          label={t('settings.illustrations')}
+          detail={t('settings.illustrationsDetail')}
           onPress={() =>
             Alert.alert(
-              'Exercise illustrations',
-              'RepNexa shows simple equipment icons for now. Licensed illustrations will be added, with their attribution listed here.',
+              t('settings.illustrations'),
+              t('settings.illustrationsMessage'),
             )
           }
         />
         <Row
-          label="Privacy"
-          detail="No servers, no analytics, no ads"
+          label={t('settings.privacy')}
+          detail={t('settings.privacyDetail')}
           onPress={() =>
             Alert.alert(
-              'Privacy',
-              'RepNexa has no servers and collects nothing. Workouts live on this phone and, if you turn on backup, in a file in your own Google Drive that only you control.',
+              t('settings.privacy'),
+              t('settings.privacyMessage'),
             )
           }
         />
         <AppText variant="caption" color="ink3" style={s.note}>
-          RepNexa {APP_VERSION}
+          {t('settings.version', { version: APP_VERSION })}
         </AppText>
       </Card>
     </ScrollView>

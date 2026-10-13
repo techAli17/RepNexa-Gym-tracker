@@ -9,9 +9,14 @@ import { AppText } from '../../components/common/AppText';
 import { Button } from '../../components/common/Button';
 import { Card } from '../../components/common/Card';
 import { EmptyState } from '../../components/common/EmptyState';
+import { ExercisePhotoEditor } from '../../components/exercise/ExercisePhotoEditor';
+import { MuscleMap } from '../../components/exercise/MuscleMap';
 import { Icon, iconForEquipment } from '../../components/common/Icon';
 import { convertWeight, roundForDisplay } from '../../domain/calculations';
-import type { Exercise } from '../../domain/models';
+import { useT } from '../../i18n';
+import { equipmentLabel, muscleGroupLabel } from '../../i18n/labels';
+import { muscleHighlight, type Exercise } from '../../domain/models';
+import { ExercisePhotoStore } from '../../infrastructure/photos/PhotoStore';
 import { toast, toastError } from '../../store/toastStore';
 import { useStyles } from '../../theme/ThemeProvider';
 import type { Theme } from '../../theme/tokens';
@@ -24,10 +29,12 @@ export function ExerciseDetailScreen({ route, navigation }: RootScreenProps<'Exe
   const hasActive = useActiveWorkout(s => s.detail != null);
   const unit = useSettings(s => s.settings.weightUnit);
   const s = useStyles(styles);
+  const { t } = useT();
   const [e, setE] = useState<Exercise | null | undefined>(undefined);
   const [series, setSeries] = useState<E1rmPoint[]>([]);
   const [records, setRecords] = useState<ExerciseRecords | null>(null);
   const [similar, setSimilar] = useState<Exercise[]>([]);
+  const [photo, setPhoto] = useState<string | null>(null);
   const id = route.params.id;
 
   useFocusEffect(
@@ -35,17 +42,19 @@ export function ExerciseDetailScreen({ route, navigation }: RootScreenProps<'Exe
       let live = true;
       (async () => {
         try {
-          const [ex, ser, recs, sim] = await Promise.all([
+          const [ex, ser, recs, sim, ph] = await Promise.all([
             services.exercises.get(id),
             services.analytics.e1rmSeries(id),
             services.analytics.records(),
             services.exercises.similar(id, 5),
+            services.exercises.photo(id),
           ]);
           if (!live) return;
           setE(ex);
           setSeries(ser);
           setRecords(recs.find(r => r.exercise.id === id) ?? null);
           setSimilar(sim);
+          setPhoto(ph);
         } catch (err) {
           toastError(err);
           if (live) setE(null);
@@ -58,7 +67,19 @@ export function ExerciseDetailScreen({ route, navigation }: RootScreenProps<'Exe
   );
 
   if (e === undefined) return <View style={s.screen} />;
-  if (e === null) return <EmptyState title="Exercise not found" />;
+  if (e === null) return <EmptyState title={t('exercises.detail.notFound')} />;
+
+  const changePhoto = async (file: string | null) => {
+    try {
+      const replaced = await services.exercises.setPhoto(e.id, file);
+      setPhoto(file);
+      await ExercisePhotoStore.remove(replaced);
+      toast(file ? t('exercises.detail.photoSaved') : t('exercises.detail.photoRemoved'));
+    } catch (err) {
+      await ExercisePhotoStore.remove(file);
+      throw err;
+    }
+  };
 
   const show = (kg: number) => `${formatWeight(kg, 'kg', unit)} ${unit}`;
   const r = records?.records ?? {};
@@ -66,29 +87,24 @@ export function ExerciseDetailScreen({ route, navigation }: RootScreenProps<'Exe
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.body}>
-      {/* Placeholder until licensed illustrations are bundled; see docs/EXERCISE_IMAGES.md. */}
-      <View style={s.hero} accessibilityLabel="Illustration not available yet">
-        <Icon name={iconForEquipment(e.equipment)} size={64} tint="ink3" strokeWidth={1.6} />
-        <AppText variant="caption" color="ink3">
-          Illustration coming soon
-        </AppText>
-      </View>
+      {/* Your own photo; bundled illustrations are still pending, see docs/EXERCISE_IMAGES.md. */}
+      <ExercisePhotoEditor file={photo} name={e.name} icon={iconForEquipment(e.equipment)} onChange={changePhoto} />
       <AppText variant="title" accessibilityRole="header">
         {e.name}
       </AppText>
       <AppText color="ink2" style={s.meta}>
-        {titleCase(e.muscleGroup)} · {titleCase(e.equipment)}
-        {e.isCustom ? ' · Custom' : ''}
+        {muscleGroupLabel(e.muscleGroup, t)} · {equipmentLabel(e.equipment, t)}
+        {e.isCustom ? ` · ${t('exercises.custom')}` : ''}
       </AppText>
 
       <View style={s.actions}>
         {hasActive ? (
           <Button
-            label="Add to workout"
+            label={t('exercises.detail.addToWorkout')}
             onPress={async () => {
               try {
                 await store.getState().addExercise(e.id);
-                toast(`${e.name} added`);
+                toast(t('exercises.added', { name: e.name }));
                 navigation.goBack();
               } catch (err) {
                 toastError(err);
@@ -98,35 +114,36 @@ export function ExerciseDetailScreen({ route, navigation }: RootScreenProps<'Exe
           />
         ) : null}
         {e.isCustom ? (
-          <Button label="Edit" variant="outline" onPress={() => navigation.navigate('ExerciseForm', { id: e.id })} style={s.flex} />
+          <Button label={t('common.edit')} variant="outline" onPress={() => navigation.navigate('ExerciseForm', { id: e.id })} style={s.flex} />
         ) : null}
       </View>
 
-      {e.primaryMuscles.length ? <Section title="Primary muscles" body={e.primaryMuscles.map(titleCase).join(', ')} /> : null}
-      {e.secondaryMuscles.length ? <Section title="Secondary muscles" body={e.secondaryMuscles.map(titleCase).join(', ')} /> : null}
-      {e.instructions ? <Section title="How to do it" body={e.instructions} /> : null}
+      <MuscleMap highlight={muscleHighlight(e)} />
+      {e.primaryMuscles.length ? <Section title={t('exercises.detail.primary')} body={e.primaryMuscles.map(titleCase).join(', ')} /> : null}
+      {e.secondaryMuscles.length ? <Section title={t('exercises.detail.secondary')} body={e.secondaryMuscles.map(titleCase).join(', ')} /> : null}
+      {e.instructions ? <Section title={t('exercises.detail.howTo')} body={e.instructions} /> : null}
 
       <Card style={s.card}>
-        <AppText variant="heading">Your records</AppText>
+        <AppText variant="heading">{t('exercises.detail.yourRecords')}</AppText>
         {r.e1rm || r.max_weight || r.max_reps ? (
           <View style={s.recs}>
-            {r.e1rm ? <Rec label="Est. 1RM" value={show(r.e1rm.value)} date={df(r.e1rm.achievedAt)} /> : null}
-            {r.max_weight ? <Rec label="Heaviest" value={show(r.max_weight.value)} date={df(r.max_weight.achievedAt)} /> : null}
-            {r.max_reps ? <Rec label="Most reps" value={String(r.max_reps.value)} date={df(r.max_reps.achievedAt)} /> : null}
+            {r.e1rm ? <Rec label={t('exercises.detail.est1rm')} value={show(r.e1rm.value)} date={df(r.e1rm.achievedAt)} /> : null}
+            {r.max_weight ? <Rec label={t('exercises.detail.heaviest')} value={show(r.max_weight.value)} date={df(r.max_weight.achievedAt)} /> : null}
+            {r.max_reps ? <Rec label={t('exercises.detail.mostReps')} value={String(r.max_reps.value)} date={df(r.max_reps.achievedAt)} /> : null}
           </View>
         ) : (
           <AppText color="ink2" style={s.mt}>
-            Not logged yet. Finish a workout with this exercise to see your records.
+            {t('exercises.detail.notLogged')}
           </AppText>
         )}
         {series.length >= 2 ? (
           <View style={s.mt}>
             <AppText variant="label" color="ink3">
-              Estimated 1-rep max, {unit}
+              {t('exercises.detail.e1rmChart', { unit })}
             </AppText>
             <LineChart
               points={series.map(p => ({ x: p.date, y: roundForDisplay(convertWeight(p.e1rm, 'kg', unit), 1), label: df(p.date) }))}
-              accessibilityLabel={`Estimated 1-rep max over time: ${series.map(p => `${df(p.date)} ${show(p.e1rm)}`).join(', ')}`}
+              accessibilityLabel={t('exercises.detail.e1rmA11y', { points: series.map(p => `${df(p.date)} ${show(p.e1rm)}`).join(', ') })}
             />
           </View>
         ) : null}
@@ -134,7 +151,7 @@ export function ExerciseDetailScreen({ route, navigation }: RootScreenProps<'Exe
 
       {series.length ? (
         <Card style={s.card}>
-          <AppText variant="heading">Recent sessions</AppText>
+          <AppText variant="heading">{t('exercises.detail.recent')}</AppText>
           {[...series]
             .reverse()
             .slice(0, 5)
@@ -156,7 +173,7 @@ export function ExerciseDetailScreen({ route, navigation }: RootScreenProps<'Exe
 
       {similar.length ? (
         <View style={s.mtLg}>
-          <AppText variant="heading">Similar exercises</AppText>
+          <AppText variant="heading">{t('exercises.detail.similar')}</AppText>
           {similar.map(x => (
             <Pressable key={x.id} style={s.similar} onPress={() => navigation.push('ExerciseDetail', { id: x.id })} accessibilityRole="button">
               <Icon name={iconForEquipment(x.equipment)} size={20} tint="ink2" />
@@ -202,17 +219,6 @@ const styles = (t: Theme) =>
     screen: { flex: 1, backgroundColor: t.colors.bg },
     body: { padding: 18, paddingBottom: 40 },
     flex: { flex: 1 },
-    hero: {
-      height: 150,
-      borderRadius: 20,
-      backgroundColor: t.colors.surface2,
-      borderWidth: 1,
-      borderColor: t.colors.line,
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 6,
-      marginBottom: 16,
-    },
     meta: { marginTop: 4 },
     actions: { flexDirection: 'row', gap: 8, marginTop: 14 },
     section: { marginTop: 18 },

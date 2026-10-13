@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import type { WeightUnit, WorkoutExerciseDetail, WorkoutSet } from '../../domain/models';
+import { useT } from '../../i18n';
 import { useStyles, useTheme } from '../../theme/ThemeProvider';
 import type { Theme } from '../../theme/tokens';
 import { AppText } from '../common/AppText';
@@ -53,7 +54,8 @@ export const ExerciseBlock = React.memo(function ExerciseBlockCard({
   defaultRest?: number;
 }) {
   const s = useStyles(styles);
-  const t = useTheme();
+  const theme = useTheme();
+  const { t } = useT();
   const [menu, setMenu] = useState(false);
   const [notes, setNotes] = useState(item.notes ?? '');
   const labels = setLabels(item.sets);
@@ -71,7 +73,12 @@ export const ExerciseBlock = React.memo(function ExerciseBlockCard({
             ? 'mi'
             : 'km'
           : '';
-  const colB = tracking === 'duration' ? 'Sec' : tracking === 'distance_duration' ? 'Min' : 'Reps';
+  const colB =
+    tracking === 'duration'
+      ? t('workout.block.colSec')
+      : tracking === 'distance_duration'
+        ? t('workout.block.colMin')
+        : t('workout.block.colReps');
   const rest = item.restSeconds ?? defaultRest ?? null;
 
   return (
@@ -81,14 +88,14 @@ export const ExerciseBlock = React.memo(function ExerciseBlockCard({
           style={s.nameBtn}
           onPress={() => actions.openInfo(item.exerciseId)}
           accessibilityRole="button"
-          accessibilityHint="Shows how to do this exercise"
+          accessibilityHint={t('workout.block.infoHint')}
         >
           <AppText variant="heading" style={s.name}>
             {item.exercise.name}
           </AppText>
           {mode === 'live' && rest != null ? (
             <AppText variant="caption" color="ink3">
-              Rest {restText(rest)}
+              {t('workout.block.rest', { time: restText(rest) })}
             </AppText>
           ) : null}
         </Pressable>
@@ -96,7 +103,7 @@ export const ExerciseBlock = React.memo(function ExerciseBlockCard({
           onPress={() => setMenu(m => !m)}
           style={s.more}
           accessibilityRole="button"
-          accessibilityLabel={`Options for ${item.exercise.name}`}
+          accessibilityLabel={t('workout.block.optionsFor', { name: item.exercise.name })}
           accessibilityState={{ expanded: menu }}
           hitSlop={6}
         >
@@ -106,14 +113,14 @@ export const ExerciseBlock = React.memo(function ExerciseBlockCard({
       {menu ? (
         <View style={s.menu}>
           {actions.replace && mode === 'live' ? (
-            <MenuButton icon="swap" label="Replace" onPress={() => actions.replace!(item.id, item.exerciseId)} />
+            <MenuButton icon="swap" label={t('workout.block.replace')} onPress={() => actions.replace!(item.id, item.exerciseId)} />
           ) : null}
           {actions.editRest && mode === 'live' ? (
-            <MenuButton icon="timer" label="Rest" onPress={() => actions.editRest!(item.id, item.restSeconds)} />
+            <MenuButton icon="timer" label={t('workout.block.restMenu')} onPress={() => actions.editRest!(item.id, item.restSeconds)} />
           ) : null}
-          <MenuButton icon="arrowUp" label="Up" disabled={index === 0} onPress={() => actions.move(item.id, -1)} />
-          <MenuButton icon="arrowDown" label="Down" disabled={index === count - 1} onPress={() => actions.move(item.id, 1)} />
-          <MenuButton icon="trash" label="Remove" danger onPress={() => actions.remove(item.id, item.exercise.name)} />
+          <MenuButton icon="arrowUp" label={t('workout.block.up')} a11y={t('workout.block.moveUp')} disabled={index === 0} onPress={() => actions.move(item.id, -1)} />
+          <MenuButton icon="arrowDown" label={t('workout.block.down')} a11y={t('workout.block.moveDown')} disabled={index === count - 1} onPress={() => actions.move(item.id, 1)} />
+          <MenuButton icon="trash" label={t('common.remove')} danger onPress={() => actions.remove(item.id, item.exercise.name)} />
         </View>
       ) : null}
       <TextInput
@@ -122,18 +129,18 @@ export const ExerciseBlock = React.memo(function ExerciseBlockCard({
         onEndEditing={() => {
           if (notes !== (item.notes ?? '')) actions.saveNotes(item.id, notes);
         }}
-        placeholder="Add a note"
-        placeholderTextColor={t.colors.ink3}
-        accessibilityLabel={`Note for ${item.exercise.name}`}
+        placeholder={t('workout.block.addNote')}
+        placeholderTextColor={theme.colors.ink3}
+        accessibilityLabel={t('workout.block.noteFor', { name: item.exercise.name })}
         style={s.note}
         maxLength={1000}
       />
       <View style={s.colHead} importantForAccessibility="no-hide-descendants">
         <AppText variant="caption" color="ink3" style={[s.center, { width: SET_GRID.badge }]}>
-          Set
+          {t('workout.block.colSet')}
         </AppText>
         <AppText variant="caption" color="ink3" style={s.flex}>
-          {mode === 'edit' ? '' : 'Previous'}
+          {mode === 'edit' ? '' : t('workout.block.colPrevious')}
         </AppText>
         <AppText variant="caption" color="ink3" style={[s.center, { width: SET_GRID.a }]}>
           {colA}
@@ -161,7 +168,7 @@ export const ExerciseBlock = React.memo(function ExerciseBlockCard({
       ))}
       <View style={s.foot}>
         <Pressable style={[s.footBtn, s.footMain]} onPress={() => actions.addSet(item.id)} accessibilityRole="button">
-          <AppText variant="label">+ Add set</AppText>
+          <AppText variant="label">{t('workout.block.addSet')}</AppText>
         </Pressable>
         {mode === 'live' ? (
           <Pressable
@@ -172,7 +179,7 @@ export const ExerciseBlock = React.memo(function ExerciseBlockCard({
             accessibilityState={{ disabled: item.sets.length < 2 }}
           >
             <AppText variant="label" color="ink2">
-              Remove set
+              {t('workout.block.removeSet')}
             </AppText>
           </Pressable>
         ) : null}
@@ -183,12 +190,15 @@ export const ExerciseBlock = React.memo(function ExerciseBlockCard({
 
 function MenuButton({
   label,
+  a11y,
   icon,
   onPress,
   disabled,
   danger,
 }: {
   label: string;
+  /** Spoken label when it differs from the visible one. */
+  a11y?: string;
   icon: React.ComponentProps<typeof Icon>['name'];
   onPress: () => void;
   disabled?: boolean;
@@ -201,7 +211,7 @@ function MenuButton({
       disabled={disabled}
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={label === 'Up' ? 'Move up' : label === 'Down' ? 'Move down' : label}
+      accessibilityLabel={a11y ?? label}
       accessibilityState={{ disabled: !!disabled }}
     >
       <Icon name={icon} size={18} tint={danger ? 'danger' : 'ink'} />

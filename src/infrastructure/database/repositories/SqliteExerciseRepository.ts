@@ -1,4 +1,4 @@
-import type { ExerciseRepository } from '../../../application/ports/repositories';
+import type { ExercisePhotoRepository, ExerciseRepository } from '../../../application/ports/repositories';
 import type { Exercise, Timestamp, Uuid } from '../../../domain/models';
 import type { SqlExecutor } from '../SqlDatabase';
 import { EXERCISE_COLS, exerciseParams, placeholders, rowToExercise } from './mappers';
@@ -78,5 +78,33 @@ export class SqliteExerciseRepository implements ExerciseRepository {
       'UPDATE exercises SET deleted_at = ?, updated_at = ? WHERE id = ? AND is_custom = 1 AND deleted_at IS NULL',
       [at, at, id],
     );
+  }
+}
+
+export class SqliteExercisePhotoRepository implements ExercisePhotoRepository {
+  constructor(private readonly db: SqlExecutor) {}
+
+  async get(exerciseId: Uuid): Promise<string | null> {
+    const rows = await this.db.query('SELECT file_name FROM exercise_photos WHERE exercise_id = ?', [exerciseId]);
+    return rows[0] ? String(rows[0].file_name) : null;
+  }
+
+  async all(): Promise<Map<Uuid, string>> {
+    const rows = await this.db.query('SELECT exercise_id, file_name FROM exercise_photos');
+    return new Map(rows.map(r => [String(r.exercise_id), String(r.file_name)]));
+  }
+
+  async put(exerciseId: Uuid, fileName: string | null, at: Timestamp): Promise<string | null> {
+    const previous = await this.get(exerciseId);
+    if (fileName == null) {
+      await this.db.run('DELETE FROM exercise_photos WHERE exercise_id = ?', [exerciseId]);
+    } else {
+      await this.db.run(
+        `INSERT INTO exercise_photos (exercise_id, file_name, updated_at) VALUES (?, ?, ?)
+         ON CONFLICT (exercise_id) DO UPDATE SET file_name = excluded.file_name, updated_at = excluded.updated_at`,
+        [exerciseId, fileName, at],
+      );
+    }
+    return previous === fileName ? null : previous;
   }
 }

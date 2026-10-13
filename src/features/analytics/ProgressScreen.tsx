@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useServices, useSettings } from '../../app/AppContext';
 import type { TabScreenProps } from '../../app/navigation/types';
@@ -10,19 +10,16 @@ import { Card } from '../../components/common/Card';
 import { Chip } from '../../components/common/Chip';
 import { EmptyState } from '../../components/common/EmptyState';
 import { Icon } from '../../components/common/Icon';
+import { SkeletonCard } from '../../components/common/Skeleton';
 import { convertWeight, roundForDisplay } from '../../domain/calculations';
+import { useT } from '../../i18n';
 import { toastError } from '../../store/toastStore';
-import { useStyles, useTheme } from '../../theme/ThemeProvider';
+import { useStyles } from '../../theme/ThemeProvider';
 import type { Theme } from '../../theme/tokens';
 import { formatDate, formatDuration, formatVolume, formatWeight } from '../../utils/format';
 
 type Range = '30' | '90' | '365' | 'all';
-const RANGES: Array<[Range, string]> = [
-  ['30', '1M'],
-  ['90', '3M'],
-  ['365', '1Y'],
-  ['all', 'All'],
-];
+const RANGES: Range[] = ['30', '90', '365', 'all'];
 const since = (r: Range) => (r === 'all' ? undefined : Date.now() - Number(r) * 86_400_000);
 const weeksFor = (r: Range) => (r === '30' ? 5 : r === '90' ? 13 : r === '365' ? 52 : 26);
 
@@ -30,7 +27,7 @@ export function ProgressScreen({ navigation }: TabScreenProps<'Progress'>) {
   const services = useServices();
   const unit = useSettings(x => x.settings.weightUnit);
   const s = useStyles(styles);
-  const t = useTheme();
+  const { t } = useT();
   const [logged, setLogged] = useState<LoggedExercise[] | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [range, setRange] = useState<Range>('90');
@@ -67,8 +64,10 @@ export function ProgressScreen({ navigation }: TabScreenProps<'Progress'>) {
 
   if (logged == null) {
     return (
-      <View style={s.center}>
-        <ActivityIndicator color={t.colors.ink3} />
+      <View style={[s.screen, s.body]}>
+        <SkeletonCard height={240} />
+        <SkeletonCard height={170} />
+        <SkeletonCard height={150} />
       </View>
     );
   }
@@ -76,9 +75,9 @@ export function ProgressScreen({ navigation }: TabScreenProps<'Progress'>) {
     return (
       <View style={s.screen}>
         <EmptyState
-          title="Nothing to chart yet"
-          message="Finish a workout and your strength, volume and records will show up here."
-          actionLabel="Go to Home"
+          title={t('progress.emptyTitle')}
+          message={t('progress.emptyMessage')}
+          actionLabel={t('progress.goHome')}
           onAction={() => navigation.navigate('Home')}
         />
       </View>
@@ -102,18 +101,18 @@ export function ProgressScreen({ navigation }: TabScreenProps<'Progress'>) {
           <Chip key={l.exercise.id} label={l.exercise.name} selected={selected === l.exercise.id} onPress={() => setSelected(l.exercise.id)} />
         ))}
       </ScrollView>
-      <View style={s.rangeRow} accessibilityRole="radiogroup" accessibilityLabel="Date range">
-        {RANGES.map(([r, l]) => (
+      <View style={s.rangeRow} accessibilityRole="radiogroup" accessibilityLabel={t('progress.dateRange')}>
+        {RANGES.map(r => (
           <Pressable
             key={r}
             onPress={() => setRange(r)}
             style={[s.range, range === r && s.rangeOn]}
             accessibilityRole="radio"
             accessibilityState={{ checked: range === r }}
-            accessibilityLabel={{ '30': 'Last month', '90': 'Last 3 months', '365': 'Last year', all: 'All time' }[r]}
+            accessibilityLabel={t(`progress.rangeA11y.${r}`)}
           >
             <AppText variant="label" color={range === r ? 'ink' : 'ink3'}>
-              {l}
+              {t(`progress.range.${r}`)}
             </AppText>
           </Pressable>
         ))}
@@ -121,7 +120,7 @@ export function ProgressScreen({ navigation }: TabScreenProps<'Progress'>) {
 
       <Card style={s.mt}>
         <View style={s.cardHead}>
-          <AppText variant="heading">Estimated 1-rep max</AppText>
+          <AppText variant="heading">{t('progress.e1rmTitle')}</AppText>
           <AppText variant="caption" color="ink3" numberOfLines={1} style={s.shrink}>
             {name}, {unit}
           </AppText>
@@ -130,27 +129,27 @@ export function ProgressScreen({ navigation }: TabScreenProps<'Progress'>) {
           <>
             <LineChart
               points={series.map(p => ({ x: p.date, y: roundForDisplay(convertWeight(p.e1rm, 'kg', unit), 1), label: df(p.date) }))}
-              accessibilityLabel={`${name}, estimated 1-rep max: ${series.map(p => `${df(p.date)} ${show(p.e1rm)} ${unit}`).join(', ')}`}
+              accessibilityLabel={t('progress.e1rmA11y', { name, points: series.map(p => `${df(p.date)} ${show(p.e1rm)} ${unit}`).join(', ') })}
             />
             <View style={s.stats}>
-              <MiniStat value={show(last.e1rm)} label={`Current, ${unit}`} />
-              <MiniStat value={`${change > 0 ? '+' : change < 0 ? '−' : ''}${formatWeight(Math.abs(change), unit, unit)}`} label="Change" good={change > 0} divider />
-              <MiniStat value={String(series.length)} label="Sessions" divider />
+              <MiniStat value={show(last.e1rm)} label={t('progress.current', { unit })} />
+              <MiniStat value={`${change > 0 ? '+' : change < 0 ? '−' : ''}${formatWeight(Math.abs(change), unit, unit)}`} label={t('progress.change')} good={change > 0} divider />
+              <MiniStat value={String(series.length)} label={t('progress.sessions')} divider />
             </View>
           </>
         ) : (
           <AppText color="ink2" style={s.mtSm}>
-            Log {name || 'this exercise'} in two workouts in this range to see a trend.
+            {t('progress.needTwo', { name: name || t('progress.thisExercise') })}
           </AppText>
         )}
         <AppText variant="caption" color="ink3" style={s.mtSm}>
-          Estimated from your best set each session (Epley formula, sets of 12 reps or fewer). Not a tested max.
+          {t('progress.e1rmNote')}
         </AppText>
       </Card>
 
       <Card style={s.mt}>
         <View style={s.cardHead}>
-          <AppText variant="heading">Weekly volume</AppText>
+          <AppText variant="heading">{t('progress.weeklyVolume')}</AppText>
           <AppText variant="caption" color="ink3">
             {unit}
           </AppText>
@@ -158,32 +157,36 @@ export function ProgressScreen({ navigation }: TabScreenProps<'Progress'>) {
         <BarChart
           bars={weeks.map(w => ({ value: convertWeight(w.volumeKg, 'kg', unit), label: df(w.weekStart) }))}
           formatValue={v => formatVolume(v, 'kg') /* bars are already in the viewer's unit */}
-          accessibilityLabel={`Weekly volume: ${weeks.map(w => `week of ${df(w.weekStart)} ${formatVolume(w.volumeKg, unit)} ${unit}`).join(', ')}`}
+          accessibilityLabel={t('progress.weeklyVolumeA11y', {
+            weeks: weeks.map(w => t('progress.weekOf', { date: df(w.weekStart), value: `${formatVolume(w.volumeKg, unit)} ${unit}` })).join(', '),
+          })}
         />
       </Card>
 
       <Card style={s.mt}>
         <View style={s.cardHead}>
-          <AppText variant="heading">Workouts per week</AppText>
+          <AppText variant="heading">{t('progress.workoutsPerWeek')}</AppText>
         </View>
         <BarChart
           height={120}
           bars={weeks.map(w => ({ value: w.workouts, label: df(w.weekStart) }))}
           formatValue={v => String(v)}
-          accessibilityLabel={`Workouts per week: ${weeks.map(w => `week of ${df(w.weekStart)} ${w.workouts}`).join(', ')}`}
+          accessibilityLabel={t('progress.workoutsPerWeekA11y', {
+            weeks: weeks.map(w => t('progress.weekOf', { date: df(w.weekStart), value: w.workouts })).join(', '),
+          })}
         />
         <View style={s.stats}>
-          <MiniStat value={avgPerWeek.toFixed(1)} label="Avg per week" />
-          <MiniStat value={formatDuration(totalTime)} label="Time trained" divider />
-          <MiniStat value={String(streak)} label="Week streak" divider />
+          <MiniStat value={avgPerWeek.toFixed(1)} label={t('progress.avgPerWeek')} />
+          <MiniStat value={formatDuration(totalTime)} label={t('progress.timeTrained')} divider />
+          <MiniStat value={String(streak)} label={t('progress.weekStreak')} divider />
         </View>
         <AppText variant="caption" color="ink3" style={s.mtSm}>
-          A week counts toward your streak when you train at least twice.
+          {t('progress.streakNote')}
         </AppText>
       </Card>
 
       <Card style={s.mt}>
-        <AppText variant="heading">Personal records</AppText>
+        <AppText variant="heading">{t('progress.personalRecords')}</AppText>
         {records.map(r => {
           const best = r.records.e1rm ?? r.records.max_weight;
           const reps = r.records.max_reps;
@@ -198,10 +201,12 @@ export function ProgressScreen({ navigation }: TabScreenProps<'Progress'>) {
               <View style={s.shrink}>
                 <AppText variant="label">{r.exercise.name}</AppText>
                 <AppText variant="caption" color="ink3">
-                  {best ? `${best === r.records.e1rm ? 'Est. 1RM' : 'Heaviest'} · ${df(best.achievedAt)}` : `Most reps · ${df(reps!.achievedAt)}`}
+                  {best
+                    ? `${best === r.records.e1rm ? t('progress.estE1rm') : t('progress.heaviest')} · ${df(best.achievedAt)}`
+                    : `${t('progress.mostReps')} · ${df(reps!.achievedAt)}`}
                 </AppText>
               </View>
-              <AppText style={s.prValue}>{best ? `${show(best.value)} ${unit}` : `${reps?.value} reps`}</AppText>
+              <AppText style={s.prValue}>{best ? `${show(best.value)} ${unit}` : t('progress.reps', { reps: reps?.value ?? '' })}</AppText>
             </Pressable>
           );
         })}

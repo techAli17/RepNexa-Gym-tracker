@@ -4,6 +4,7 @@ import { workoutDurationMs } from '../../domain/calculations';
 import type { WeightUnit, WorkoutListItem } from '../../domain/models';
 import { useStyles } from '../../theme/ThemeProvider';
 import type { Theme } from '../../theme/tokens';
+import { useT } from '../../i18n';
 import { formatDate, formatDuration, formatVolume } from '../../utils/format';
 import { AppText } from '../common/AppText';
 
@@ -17,10 +18,11 @@ export const WorkoutRow = React.memo(function WorkoutRowView({
   onPress: (id: string) => void;
 }) {
   const s = useStyles(styles);
+  const { t } = useT();
   const w = item.workout;
   const dur = formatDuration(workoutDurationMs(w, w.endedAt ?? w.startedAt));
   const vol = `${formatVolume(item.volumeKg, unit)} ${unit}`;
-  const sets = `${item.completedSetCount} sets`;
+  const sets = t('workout.row.sets', { n: item.completedSetCount });
   const day = formatDate(w.startedAt, { day: 'numeric' });
   const month = formatDate(w.startedAt, { month: 'short' });
   return (
@@ -28,7 +30,7 @@ export const WorkoutRow = React.memo(function WorkoutRowView({
       style={({ pressed }) => [s.row, pressed && s.pressed]}
       onPress={() => onPress(w.id)}
       accessibilityRole="button"
-      accessibilityLabel={`${w.name}, ${formatDate(w.startedAt, { weekday: 'long', day: 'numeric', month: 'long' })}, ${dur}, ${vol}, ${sets}${item.recordCount ? `, ${item.recordCount} records` : ''}`}
+      accessibilityLabel={`${w.name}, ${formatDate(w.startedAt, { weekday: 'long', day: 'numeric', month: 'long' })}, ${dur}, ${vol}, ${sets}${item.recordCount ? `, ${t('workout.row.records', { n: item.recordCount })}` : ''}`}
     >
       <View style={s.date}>
         <AppText style={s.day}>{day}</AppText>
@@ -47,7 +49,7 @@ export const WorkoutRow = React.memo(function WorkoutRowView({
       {item.recordCount ? (
         <View style={s.pr}>
           <AppText variant="caption" color="accent" style={s.prText}>
-            {item.recordCount} PR
+            {t('workout.row.pr', { n: item.recordCount })}
           </AppText>
         </View>
       ) : null}

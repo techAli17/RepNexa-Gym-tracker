@@ -46,7 +46,11 @@ export async function openSession(owner: string, auth: AuthGateway): Promise<Ses
       backup: services.backup,
       auth,
       cloud: new DriveBackupStore(auth),
-      autoBackupEnabled: () => settings.getState().settings.autoBackup,
+      // Drive only depends on backups to move workouts off the phone, so it always backs up.
+      autoBackupEnabled: () => {
+        const st = settings.getState().settings;
+        return st.autoBackup || st.storagePolicy === 'drive_only';
+      },
       onState: s => backupStatus.setState(s, true),
     });
 

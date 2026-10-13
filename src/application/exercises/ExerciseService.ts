@@ -39,6 +39,27 @@ export class ExerciseService {
     return this.d.repos.exercises.getById(id);
   }
 
+  /** File name of your own photo of this exercise, or null. */
+  photo(id: Uuid): Promise<string | null> {
+    return this.d.repos.exercisePhotos.get(id);
+  }
+
+  photos(): Promise<Map<Uuid, string>> {
+    return this.d.repos.exercisePhotos.all();
+  }
+
+  /**
+   * Sets (or with null, clears) the photo of any exercise, built-in or custom.
+   * Returns the replaced file so the caller can delete it. Not backed up, so
+   * the backup revision is left alone.
+   */
+  async setPhoto(id: Uuid, fileName: string | null): Promise<string | null> {
+    return this.d.uow.run(async r => {
+      if (!(await r.exercises.getById(id))) throw new DomainError('NOT_FOUND', 'Exercise not found');
+      return r.exercisePhotos.put(id, fileName, this.d.clock.now());
+    });
+  }
+
   async seedBuiltIns(catalog: readonly Exercise[]): Promise<void> {
     await this.d.uow.run(r => r.exercises.upsertBuiltIns(catalog));
   }

@@ -1,3 +1,4 @@
+import { t, translateError } from '../i18n';
 import { create } from 'zustand';
 import { isDomainError } from '../domain/errors';
 
@@ -23,9 +24,9 @@ export const toast = (message: string) => useToastStore.getState().show(message)
  */
 export function toastError(e: unknown) {
   if (isDomainError(e)) {
-    toast(e.message);
+    toast(translateError(e));
     return;
   }
   console.error(e);
-  toast('Something went wrong. Your logged sets are saved.');
+  toast(t('common.unexpectedError'));
 }

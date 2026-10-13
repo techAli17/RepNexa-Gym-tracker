@@ -1,7 +1,7 @@
 import type { Repositories, UnitOfWork } from '../../../application/ports/repositories';
 import type { SqlDatabase, SqlExecutor } from '../SqlDatabase';
 import { SqliteBackupDataRepository } from './SqliteBackupDataRepository';
-import { SqliteExerciseRepository } from './SqliteExerciseRepository';
+import { SqliteExercisePhotoRepository, SqliteExerciseRepository } from './SqliteExerciseRepository';
 import { SqlitePlanRepository } from './SqlitePlanRepository';
 import { SqliteRoutineRepository } from './SqliteRoutineRepository';
 import {
@@ -14,6 +14,7 @@ import { SqliteWorkoutRepository } from './SqliteWorkoutRepository';
 export function createRepositories(db: SqlExecutor): Repositories {
   return {
     exercises: new SqliteExerciseRepository(db),
+    exercisePhotos: new SqliteExercisePhotoRepository(db),
     workouts: new SqliteWorkoutRepository(db),
     routines: new SqliteRoutineRepository(db),
     records: new SqlitePersonalRecordRepository(db),

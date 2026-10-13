@@ -204,12 +204,19 @@ export class WorkoutService {
 
   /* --------------------------- exercises ----------------------------- */
 
+  /**
+   * Adds an exercise. On a finished workout (history edit) it gets one unticked
+   * set, prefilled from last time: the user fills it in and ticks it, and
+   * `tidyFinished` drops whatever was left unticked.
+   */
   async addExercise(workoutId: Uuid, exerciseId: Uuid, unit: WeightUnit): Promise<WorkoutDetail> {
     await this.d.uow.run(async r => {
-      await this.requireActive(r, workoutId);
+      const w = await this.requireEditable(r, workoutId);
       const existing = await r.workouts.listWorkoutExercises(workoutId);
       const position = existing.reduce((m, e) => Math.max(m, e.position + 1), 0);
-      await this.insertExercise(r, workoutId, position, { exerciseId, targetSets: 0, targetReps: null }, unit);
+      const finished = w.status === 'completed';
+      await this.insertExercise(r, workoutId, position, { exerciseId, targetSets: finished ? 1 : 0, targetReps: null }, unit);
+      await this.afterEdit(r, w, []);
     });
     return (await this.repos.workouts.getDetail(workoutId))!;
   }
@@ -325,8 +332,11 @@ export class WorkoutService {
 
   async setCompleted(setId: Uuid, completed: boolean): Promise<WorkoutSet> {
     return this.d.uow.run(async r => {
-      const { set, exercise } = await this.requireActiveSet(r, setId);
+      const { set, exercise, workout } = await this.requireEditableSet(r, setId);
       if (completed === (set.completedAt != null)) return set;
+      if (workout.status === 'completed' && !completed) {
+        throw new DomainError('VALIDATION', 'Remove the set instead: a finished workout only keeps done sets.');
+      }
       if (completed) {
         const missing = missingFieldsForCompletion(set, exercise.trackingType);
         if (missing.length) {
@@ -334,9 +344,28 @@ export class WorkoutService {
         }
       }
       const now = this.now();
-      const next: WorkoutSet = { ...set, completedAt: completed ? now : null, updatedAt: now };
+      // In a finished workout the set is dated to the workout, not to today's edit.
+      const doneAt = workout.status === 'completed' ? workout.endedAt ?? now : now;
+      const next: WorkoutSet = { ...set, completedAt: completed ? doneAt : null, updatedAt: now };
       await r.workouts.updateSet(next);
+      await this.afterEdit(r, workout, [exercise.id]);
       return next;
+    });
+  }
+
+  /**
+   * Ends a history edit: drops sets left unticked and exercises left without
+   * sets, so history only ever holds done sets. No-op for active workouts.
+   */
+  async tidyFinished(workoutId: Uuid): Promise<void> {
+    await this.d.uow.run(async r => {
+      const w = await r.workouts.getById(workoutId);
+      if (!w || w.status !== 'completed' || w.deletedAt != null) return;
+      const before = await r.workouts.getDetail(workoutId);
+      const loose = before?.exercises.filter(e => e.sets.some(s => s.completedAt == null)) ?? [];
+      if (!loose.length) return;
+      await r.workouts.pruneIncomplete(workoutId);
+      await this.afterEdit(r, w, loose.map(e => e.exerciseId));
     });
   }
 
@@ -521,14 +550,6 @@ export class WorkoutService {
     return we;
   }
 
-  private async requireActiveSet(r: Repositories, setId: Uuid): Promise<{ set: WorkoutSet; exercise: Exercise }> {
-    const set = await r.workouts.getSet(setId);
-    if (!set) throw new DomainError('NOT_FOUND', 'Set not found');
-    const we = await this.requireWorkoutExercise(r, set.workoutExerciseId);
-    await this.requireActive(r, we.workoutId);
-    const exercise = await r.exercises.getById(we.exerciseId);
-    if (!exercise) throw new DomainError('NOT_FOUND', 'Exercise not found');
-    return { set, exercise };
-  }
+
 }
 

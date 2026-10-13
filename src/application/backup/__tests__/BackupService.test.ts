@@ -4,6 +4,7 @@
 import { builtInId } from '../../../data/exercises/builtInExercises';
 import { BACKUP_SCHEMA_VERSION } from '../../../domain/backup/format';
 import { BackupFormatError } from '../../../domain/backup/parse';
+import { summarizeBackupWorkout } from '../../../domain/backup/summary';
 import { createTestServices, resetAllDatabases } from '../../../test/testServices';
 import { CloudError, type AccountInfo, type CloudBackupStore, type RemoteFile } from '../../ports/cloud';
 
@@ -292,6 +293,53 @@ describe('local retention', () => {
     // Records follow what is on the phone.
     const maxW = (await a.repos.records.listForExercises([BENCH])).find(r => r.recordType === 'max_weight')!;
     expect(maxW.value).toBe(85);
+  });
+
+  it('lets pruned workouts be viewed from Drive without bringing them back', async () => {
+    const a = await createTestServices();
+    const old = await logWorkout(a, [BENCH], 80);
+    a.clock.advance(400 * DAY);
+    await logWorkout(a, [SQUAT], 100);
+    await a.services.settings.update({ localRetentionMonths: 6 });
+    const drive = new FakeDrive();
+    await a.services.backup.sync(drive, ACCOUNT);
+    expect(await a.services.backup.prunedCount()).toBe(1);
+
+    const remote = (await a.services.backup.driveOnlyWorkouts(drive))!;
+    expect(remote.workouts.map(w => w.id)).toEqual([old]);
+    expect(remote.exerciseNames.get(BENCH)).toBe('Bench Press');
+    expect(summarizeBackupWorkout(remote.workouts[0])).toMatchObject({ sets: 3, volumeKg: 80 * 5 * 3 });
+    // Viewing writes nothing: the workout is still off the phone.
+    expect(await historyIds(a)).not.toContain(old);
+  });
+
+  it('reports no Drive history when there is no backup yet', async () => {
+    const a = await createTestServices();
+    expect(await a.services.backup.driveOnlyWorkouts(new FakeDrive())).toBeNull();
+  });
+
+  it('Drive only: every verified workout leaves the phone, the active one stays', async () => {
+    const a = await createTestServices();
+    const w1 = await logWorkout(a, [BENCH], 80);
+    const w2 = await logWorkout(a, [SQUAT], 100); // recent: still removed in this mode
+    await a.services.settings.update({ storagePolicy: 'drive_only' });
+    const active = await a.services.workouts.startEmpty('kg');
+    const drive = new FakeDrive();
+    expect(await a.services.backup.sync(drive, ACCOUNT)).toMatchObject({ status: 'uploaded', pruned: 2 });
+    expect(await historyIds(a)).toEqual([]);
+    expect((await a.services.workouts.getActiveDetail())!.workout.id).toBe(active.workout.id);
+    const remote = (await a.services.backup.driveOnlyWorkouts(drive))!;
+    expect(remote.workouts.map(w => w.id).sort()).toEqual([w1, w2].sort());
+  });
+
+  it('Drive only: nothing leaves the phone without a verified backup', async () => {
+    const a = await createTestServices();
+    await logWorkout(a, [BENCH], 80);
+    await a.services.settings.update({ storagePolicy: 'drive_only' });
+    const drive = new FakeDrive();
+    drive.corruptNextEcho = true;
+    await expect(a.services.backup.sync(drive, ACCOUNT)).rejects.toMatchObject({ kind: 'verify' });
+    expect(await historyIds(a)).toHaveLength(1);
   });
 
   it('does nothing without a verified backup', async () => {

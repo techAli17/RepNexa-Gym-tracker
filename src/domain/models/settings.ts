@@ -2,15 +2,21 @@ import type { WeightUnit } from './units';
 
 export type ThemePreference = 'system' | 'light' | 'dark';
 
+/** 'system' follows the phone's language (Hindi when the phone is set to Hindi, else English). */
+export type LanguagePreference = 'system' | 'en' | 'hi';
+
 /**
- * Where history lives. Only 'phone_and_drive' exists today; a strict
- * 'drive_only' policy may be added later as a separate, explicit choice.
+ * Where finished workouts are kept.
+ * - 'phone_and_drive': on this phone (optionally trimmed by localRetentionMonths) and in Drive.
+ * - 'drive_only': removed from this phone as soon as a verified Drive backup holds them;
+ *   viewing them needs the Drive connection. The workout in progress always stays on the phone.
  */
-export type StoragePolicy = 'phone_and_drive';
+export type StoragePolicy = 'phone_and_drive' | 'drive_only';
 
 export interface AppSettings {
   weightUnit: WeightUnit;
   theme: ThemePreference;
+  language: LanguagePreference;
   defaultRestSeconds: number;
   storagePolicy: StoragePolicy;
   /** Back up to Drive automatically after changes (when connected). */
@@ -33,6 +39,7 @@ export interface AppSettings {
 export const DEFAULT_SETTINGS: AppSettings = {
   weightUnit: 'kg',
   theme: 'system',
+  language: 'system',
   defaultRestSeconds: 90,
   storagePolicy: 'phone_and_drive',
   autoBackup: true,

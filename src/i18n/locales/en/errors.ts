@@ -1,0 +1,58 @@
+/**
+ * Messages services throw (DomainError). The English text here must equal the
+ * thrown message exactly: translateError finds the Hindi by matching it.
+ * `codes` is the fallback for any message not listed.
+ */
+export const errors = {
+  messages: {
+    activeExists: 'Finish or discard the current workout first',
+    duplicateExercise: 'You already have an exercise with that name',
+    exerciseNotFound: 'Exercise not found',
+    exerciseNotInWorkout: 'Exercise not found in workout',
+    exerciseGone: 'One of the exercises no longer exists',
+    routineNotFound: 'Routine not found',
+    setNotFound: 'Set not found',
+    workoutNotFound: 'Workout not found',
+    noCompletedSets: 'Check off at least one set to finish',
+    needsExercise: 'A finished workout needs at least one exercise. Delete the workout instead.',
+    needsSet: 'A finished workout needs at least one set. Delete the workout instead.',
+    builtInReadOnly: 'Built-in exercises cannot be edited',
+    nameWorkout: 'Give the workout a name',
+    invalidSet: 'Invalid set values',
+    noCamera: 'No camera is available. Choose a photo from your library instead.',
+    nothingToCopy: 'Nothing to copy',
+    onlyOwnDeletable: 'Only your own exercises can be deleted',
+    pickWeekday: 'Pick a day of the week',
+    removeInstead: 'Remove the set instead: a finished workout only keeps done sets.',
+    cameraAccess: 'RepNexa needs camera access. Turn it on in your phone’s Settings.',
+    photoAccess: 'RepNexa needs photo access. Turn it on in your phone’s Settings.',
+    restRange: 'Rest must be between 0 and 60 minutes',
+    fileUnreadable: 'The file could not be opened.',
+    fileTooLarge: 'This file is too large to be a RepNexa backup.',
+    alreadyFinished: 'This workout is already finished',
+    useDiscard: 'Use discard for an active workout',
+    nameExercise: 'Give the exercise a name',
+    nameRoutine: 'Give the routine a name',
+    nameTooLong: 'Keep the name under 80 characters',
+    minOneSet: 'At least 1 set',
+    maxSets: 'At most 20 sets',
+    minOneExercise: 'Add at least one exercise',
+    maxExercises: 'At most 30 exercises',
+    storageFull: 'Your phone is out of storage. Free up some space and try again. Everything saved before this is safe.',
+  },
+  /** SET_INCOMPLETE is built from field names. */
+  enterFirst: 'Enter {fields} first',
+  doneSetNeeds: 'A done set needs {fields}. Uncheck it first.',
+  and: ' and ',
+  fields: { weight: 'weight', reps: 'reps', duration: 'time', distance: 'distance' },
+  codes: {
+    VALIDATION: 'That value can’t be saved. Check it and try again.',
+    NOT_FOUND: 'That item no longer exists.',
+    ACTIVE_WORKOUT_EXISTS: 'Finish or discard the current workout first',
+    WORKOUT_NOT_ACTIVE: 'This workout is already finished',
+    NO_COMPLETED_SETS: 'Check off at least one set to finish',
+    SET_INCOMPLETE: 'Fill in the set first',
+    DUPLICATE_NAME: 'That name is already used',
+    STORAGE_FULL: 'Your phone is out of storage. Free up some space and try again. Everything saved before this is safe.',
+  },
+};

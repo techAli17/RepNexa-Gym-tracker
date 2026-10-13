@@ -5,11 +5,14 @@ import { useServices, useSettings } from '../../app/AppContext';
 import type { TabScreenProps } from '../../app/navigation/types';
 import type { LoggedExercise } from '../../application/analytics/AnalyticsService';
 import { AppText } from '../../components/common/AppText';
+import { Button } from '../../components/common/Button';
 import { Chip } from '../../components/common/Chip';
 import { EmptyState } from '../../components/common/EmptyState';
 import { Sheet } from '../../components/common/Sheet';
+import { SkeletonList } from '../../components/common/Skeleton';
 import { WorkoutRow } from '../../components/workout/WorkoutRow';
 import type { WorkoutListItem } from '../../domain/models';
+import { useT } from '../../i18n';
 import { toastError } from '../../store/toastStore';
 import { useStyles, useTheme } from '../../theme/ThemeProvider';
 import type { Theme } from '../../theme/tokens';
@@ -17,12 +20,7 @@ import { formatDate } from '../../utils/format';
 
 const PAGE = 30;
 type Range = 'all' | '30' | '90' | 'year';
-const RANGES: Array<[Range, string]> = [
-  ['all', 'All time'],
-  ['30', '30 days'],
-  ['90', '90 days'],
-  ['year', 'This year'],
-];
+const RANGES: Range[] = ['all', '30', '90', 'year'];
 
 function rangeStart(r: Range): number | undefined {
   if (r === 'all') return undefined;
@@ -54,7 +52,8 @@ export function HistoryScreen({ navigation }: TabScreenProps<'History'>) {
   const services = useServices();
   const unit = useSettings(s => s.settings.weightUnit);
   const s = useStyles(styles);
-  const t = useTheme();
+  const theme = useTheme();
+  const { t, tn } = useT();
   const [items, setItems] = useState<WorkoutListItem[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -63,6 +62,7 @@ export function HistoryScreen({ navigation }: TabScreenProps<'History'>) {
   const [picking, setPicking] = useState(false);
   const [logged, setLogged] = useState<LoggedExercise[]>([]);
   const done = useRef(false);
+  const [prunedCount, setPrunedCount] = useState(0);
 
   const query = useCallback(
     (startedBefore?: number) =>
@@ -72,14 +72,15 @@ export function HistoryScreen({ navigation }: TabScreenProps<'History'>) {
 
   const reload = useCallback(async () => {
     try {
-      const first = await query();
+      const [first, pruned] = await Promise.all([query(), services.backup.prunedCount()]);
       done.current = first.length < PAGE;
       setItems(first);
+      setPrunedCount(pruned);
     } catch (e) {
       toastError(e);
       setItems(prev => prev ?? []);
     }
-  }, [query]);
+  }, [query, services]);
 
   useFocusEffect(
     useCallback(() => {
@@ -112,18 +113,18 @@ export function HistoryScreen({ navigation }: TabScreenProps<'History'>) {
   const header = (
     <View style={s.filters}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chipRow}>
-        {RANGES.map(([r, l]) => (
-          <Chip key={r} label={l} selected={range === r} onPress={() => setRange(r)} />
+        {RANGES.map(r => (
+          <Chip key={r} label={t(`history.range.${r}`)} selected={range === r} onPress={() => setRange(r)} />
         ))}
       </ScrollView>
       <Pressable
         style={[s.exFilter, exercise && s.exFilterOn]}
         onPress={exercise ? () => setExercise(null) : openPicker}
         accessibilityRole="button"
-        accessibilityLabel={exercise ? `Filtered by ${exercise.name}. Clear filter` : 'Filter by exercise'}
+        accessibilityLabel={exercise ? t('history.filteredBy', { name: exercise.name }) : t('history.filterByExercise')}
       >
         <AppText variant="label" color={exercise ? 'bg' : 'ink2'}>
-          {exercise ? `${exercise.name}  ✕` : 'Filter by exercise'}
+          {exercise ? `${exercise.name}  ✕` : t('history.filterByExercise')}
         </AppText>
       </Pressable>
     </View>
@@ -131,8 +132,8 @@ export function HistoryScreen({ navigation }: TabScreenProps<'History'>) {
 
   if (items == null) {
     return (
-      <View style={s.center}>
-        <ActivityIndicator color={t.colors.ink3} />
+      <View style={s.screen}>
+        <SkeletonList rows={7} />
       </View>
     );
   }
@@ -164,21 +165,33 @@ export function HistoryScreen({ navigation }: TabScreenProps<'History'>) {
         }}
         initialNumToRender={14}
         windowSize={7}
-        ListFooterComponent={loadingMore ? <ActivityIndicator style={s.more} color={t.colors.ink3} /> : undefined}
+        ListFooterComponent={
+          loadingMore ? (
+            <ActivityIndicator style={s.more} color={theme.colors.ink3} />
+          ) : prunedCount > 0 ? (
+            <Button
+              label={t('history.olderInDrive', { count: prunedCount })}
+              variant="outline"
+              onPress={() => navigation.navigate('DriveHistory')}
+              accessibilityHint={t('history.olderInDriveHint')}
+              style={s.more}
+            />
+          ) : undefined
+        }
         ListEmptyComponent={
           filtered ? (
-            <EmptyState title="No workouts match" message="Try a wider date range or another exercise." />
+            <EmptyState title={t('history.noMatchTitle')} message={t('history.noMatchMessage')} />
           ) : (
             <EmptyState
-              title="No workouts yet"
-              message="Your finished workouts will show up here."
-              actionLabel="Go to Home"
+              title={t('history.emptyTitle')}
+              message={t('history.emptyMessage')}
+              actionLabel={t('history.goHome')}
               onAction={() => navigation.navigate('Home')}
             />
           )
         }
       />
-      <Sheet visible={picking} onClose={() => setPicking(false)} title="Filter by exercise">
+      <Sheet visible={picking} onClose={() => setPicking(false)} title={t('history.filterByExercise')}>
         {logged.length ? (
           logged.map(l => (
             <Pressable
@@ -192,12 +205,12 @@ export function HistoryScreen({ navigation }: TabScreenProps<'History'>) {
             >
               <AppText style={s.flex}>{l.exercise.name}</AppText>
               <AppText variant="caption" color="ink3">
-                {l.workoutCount} {l.workoutCount === 1 ? 'workout' : 'workouts'}
+                {tn('history.workoutCount', l.workoutCount)}
               </AppText>
             </Pressable>
           ))
         ) : (
-          <AppText color="ink2">Exercises you have logged will appear here.</AppText>
+          <AppText color="ink2">{t('history.pickerEmpty')}</AppText>
         )}
       </Sheet>
     </>

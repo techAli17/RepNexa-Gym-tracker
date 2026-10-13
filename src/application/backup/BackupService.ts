@@ -6,6 +6,7 @@ import {
   toIso,
   type BackupData,
   type BackupPlan,
+  type BackupWorkout,
   type BackupFile,
 } from '../../domain/backup/format';
 import { isEmptyChange, mergeBackups, type MergeStats } from '../../domain/backup/merge';
@@ -21,6 +22,11 @@ export interface ImportPreview {
   stats: MergeStats;
   /** Nothing would change: every item is already here, or newer here. */
   noChanges: boolean;
+}
+
+export interface DriveOnlyHistory {
+  workouts: BackupWorkout[];
+  exerciseNames: Map<string, string>;
 }
 
 export type SyncOutcome =
@@ -242,8 +248,10 @@ export class BackupService {
    */
   async applyRetention(verifiedSnapshotAt: number): Promise<number> {
     const settings = await this.d.loadSettings(this.d.repos);
-    if (settings.localRetentionMonths == null) return 0;
-    const cutoff = this.d.clock.now() - settings.localRetentionMonths * MONTH_MS;
+    const driveOnly = settings.storagePolicy === 'drive_only';
+    if (!driveOnly && settings.localRetentionMonths == null) return 0;
+    // Drive only: everything the verified snapshot holds leaves the phone, however recent.
+    const cutoff = driveOnly ? Number.MAX_SAFE_INTEGER : this.d.clock.now() - settings.localRetentionMonths! * MONTH_MS;
     return this.d.uow.run(async r => {
       const candidates = await r.backupData.pruneCandidates(cutoff, verifiedSnapshotAt);
       if (!candidates.length) return 0;
@@ -253,6 +261,36 @@ export class BackupService {
       await rebuildRecords(r, exerciseIds, this.d.clock.now());
       return candidates.length;
     });
+  }
+
+  /** Workouts removed from this phone by the retention policy (they live on in Drive). */
+  async prunedCount(): Promise<number> {
+    return (await this.d.repos.backupData.prunedIds()).size;
+  }
+
+  /**
+   * Workouts that exist only in the Drive backup (typically ones the retention
+   * policy removed from this phone), newest first, for read-only viewing.
+   * Nothing is written locally.
+   */
+  async driveOnlyWorkouts(cloud: CloudBackupStore): Promise<DriveOnlyHistory | null> {
+    const state = await this.d.repos.backupData.getSyncState();
+    const remote = await cloud.find(state.remoteFileId);
+    if (!remote) return null;
+    let data: BackupData;
+    try {
+      data = parseBackup(await cloud.read(remote)).data;
+    } catch (e) {
+      if (e instanceof BackupFormatError) {
+        throw new CloudError('remoteInvalid', `The backup in your Drive could not be read: ${e.message}`);
+      }
+      throw e;
+    }
+    const local = new Set((await this.d.repos.backupData.exportData()).workouts.map(w => w.id));
+    const workouts = data.workouts
+      .filter(w => !w.deletedAt && !local.has(w.id))
+      .sort((a, b) => fromIso(b.startedAt) - fromIso(a.startedAt));
+    return { workouts, exerciseNames: new Map(data.exercises.map(e => [e.id, e.name])) };
   }
 
   /** Reads the Drive backup and reports what restoring it would change. */
